@@ -17,7 +17,7 @@ const bcrypt_1 = __importDefault(require("bcrypt"));
 const db_1 = require("../db");
 const auth_1 = require("../utils/auth");
 const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { email, password, role, company_name, phone } = req.body;
+    const { email, password, role, company_name, phone, price_list_id } = req.body;
     if (!email || !password || !role) {
         return res.status(400).json({ message: 'Missing required fields' });
     }
@@ -27,8 +27,8 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             return res.status(400).json({ message: 'User already exists' });
         }
         const hashedPassword = yield bcrypt_1.default.hash(password, 10);
-        const result = yield (0, db_1.query)(`INSERT INTO users (email, password_hash, role, company_name, phone) 
-       VALUES ($1, $2, $3, $4, $5) RETURNING user_id, email, role`, [email, hashedPassword, role, company_name, phone]);
+        const result = yield (0, db_1.query)(`INSERT INTO users (email, password_hash, role, company_name, phone, price_list_id) 
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING user_id, email, role, price_list_id`, [email, hashedPassword, role, company_name, phone, price_list_id || null]);
         const user = result.rows[0];
         const token = (0, auth_1.generateToken)({ id: user.user_id, role: user.role });
         res.status(201).json({ user, token });

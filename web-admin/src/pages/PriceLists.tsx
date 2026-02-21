@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/axios';
 import * as XLSX from 'xlsx';
-import { Plus, Search, Save, List as ListIcon, Loader, RefreshCw, Download } from 'lucide-react';
+import { Plus, Search, Save, List as ListIcon, Loader, Download } from 'lucide-react';
 
 interface PriceList {
     price_list_id: number;
