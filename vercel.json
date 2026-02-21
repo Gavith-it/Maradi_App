@@ -20,7 +20,7 @@
         },
         {
             "source": "/(.*)",
-            "destination": "/web-admin/dist/index.html"
+            "destination": "/index.html"
         }
     ]
 }
