@@ -6,10 +6,14 @@ import Constants from 'expo-constants';
 // Automatically figures out your Wi-Fi IP address from the Expo Bundler
 const debuggerHost = Constants.expoConfig?.hostUri?.split(':')[0];
 
-// Use localhost for web, dynamic IP for mobile devices testing locally
-export const API_URL = Platform.OS === 'web'
-    ? 'http://localhost:5000/api'
-    : `http://${debuggerHost || '192.168.20.65'}:5000/api`;
+// Production: set EXPO_PUBLIC_API_URL to your Vercel API URL (e.g. https://maradi-app-theta.vercel.app/api)
+// Local: uses localhost (web) or dev machine IP (mobile on same network)
+const envApiUrl = typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL;
+export const API_URL = envApiUrl
+    ? (envApiUrl.endsWith('/api') ? envApiUrl : `${envApiUrl.replace(/\/$/, '')}/api`)
+    : Platform.OS === 'web'
+        ? 'http://localhost:5000/api'
+        : `http://${debuggerHost || '192.168.20.65'}:5000/api`;
 
 interface User {
     id: number;
