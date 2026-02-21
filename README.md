@@ -1,64 +1,73 @@
-# Maradi B2B Wholesale Ordering App (MVP)
+# React + TypeScript + Vite
 
-This repository contains the source code for the Maradi B2B system, which includes a Backend API, a Mobile App for customers/staff, and a Web Admin Dashboard.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Project Structure
+Currently, two official plugins are available:
 
--   `backend`: Node.js/Express API with PostgreSQL.
--   `mobile-app`: React Native (Expo) app for Android/iOS.
--   `web-admin`: React (Vite) dashboard for desktop management.
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## Prerequisites
+## React Compiler
 
--   Node.js (v18+)
--   PostgreSQL Database
--   Expo Go app on your phone (for testing mobile app)
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## Getting Started
+## Expanding the ESLint configuration
 
-You need to run all three components simultaneously in separate terminals.
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-### 1. Database Setup
-Ensure you have a PostgreSQL database running. Update the `.env` file in the `backend` folder with your credentials.
-(See `backend/src/db/schema.sql` for table definitions if setting up freshly).
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
 
-### 2. Run Backend
-```bash
-cd backend
-npm install
-npm run dev
-# Server runs on http://localhost:5000
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
+
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
 
-### 3. Run Web Admin Dashboard
-```bash
-cd web-admin
-npm install
-npm run dev
-# Dashboard runs on http://localhost:5173
-# Login with: owner@maradi.com / owner123 (or your configured internal user)
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
-
-### 4. Run Mobile App
-```bash
-cd mobile-app
-npm install
-npx expo start
-# Scan the QR code with Expo Go app or your camera
-```
-
-## Features Verified (MVP Phase 1)
-
-**Mobile App:**
--   **Internal Users**: Add Stock (with photo), View Pending Orders, Fulfill Orders, Scan QR.
--   **Customers**: View Catalog, Select Serials, Add to Cart (15-min reservation), Place Order, View History.
-
-**Web Admin:**
--   **Dashboard**: View KPIs (Revenue, Pending Orders).
--   **Orders**: Manage Order Status (Confirm, Dispatch, Complete).
--   **Inventory**: View Stock Levels.
-
-## Next Steps (Phase 2)
--   **Image Upload**: Replace URL inputs with actual S3/Cloudinary image upload.
--   **Notifications**: Push notifications for order updates.
--   **Production Deployment**: Deploy Backend to Render/Heroku, Web to Vercel/Netlify.
