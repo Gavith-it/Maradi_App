@@ -1,0 +1,191 @@
+import React, { useEffect, useState } from 'react';
+import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../types/navigation';
+import axios from 'axios';
+import { useAuthStore, API_URL } from '../store/useAuthStore';
+import { theme } from '../styles/theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import { ShoppingCart } from 'lucide-react-native';
+
+interface Serial {
+    serial_id: number;
+    serial_number: string;
+    image_url: string;
+    status: string;
+    item_name: string;
+    master_price: string;
+}
+
+export const SerialSelectionScreen = () => {
+    const route = useRoute<any>();
+    const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+    const { itemCode, itemName } = route.params;
+    const [serials, setSerials] = useState<Serial[]>([]);
+    const [loading, setLoading] = useState(true);
+    const { token } = useAuthStore();
+
+    useEffect(() => {
+        fetchSerials();
+    }, [itemCode]);
+
+    const fetchSerials = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/items/${itemCode}/serials`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setSerials(response.data);
+        } catch (error) {
+            console.error(error);
+            Alert.alert('Error', 'Failed to fetch serials');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const addToCart = async (serialId: number) => {
+        try {
+            await axios.post(`${API_URL}/cart/add`, { serial_id: serialId }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            Alert.alert('Success', 'Item added to cart', [
+                { text: 'Go to Cart', onPress: () => navigation.navigate('Cart') },
+                { text: 'Continue Shopping', style: 'cancel', onPress: fetchSerials } // Refresh to update status
+            ]);
+        } catch (error: any) {
+            Alert.alert('Error', error.response?.data?.message || 'Failed to add to cart');
+        }
+    };
+
+    const renderItem = ({ item }: { item: Serial }) => (
+        <View style={styles.card}>
+            <Image
+                source={{ uri: item.image_url || 'https://via.placeholder.com/150' }}
+                style={styles.image}
+            />
+            <View style={styles.info}>
+                <Text style={styles.serial}>SN: {item.serial_number}</Text>
+                <Text style={styles.price}>₹{item.master_price}</Text>
+                <TouchableOpacity onPress={() => addToCart(item.serial_id)} activeOpacity={0.8} style={{ marginTop: 8 }}>
+                    <LinearGradient
+                        colors={theme.colors.orangeGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.cartButton}
+                    >
+                        <ShoppingCart size={16} color="white" style={{ marginRight: 6 }} />
+                        <Text style={styles.buttonText}>Add to Cart</Text>
+                    </LinearGradient>
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+            </View>
+        );
+    }
+
+    return (
+        <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
+            <View style={styles.headerContainer}>
+                <Text style={styles.header}>{itemName}</Text>
+                <Text style={styles.subtext}>Select a specific piece to purchase</Text>
+            </View>
+            <FlatList
+                data={serials}
+                renderItem={renderItem}
+                keyExtractor={(item) => item.serial_number}
+                numColumns={2}
+                contentContainerStyle={styles.list}
+                showsVerticalScrollIndicator={false}
+                ListEmptyComponent={<Text style={styles.empty}>No available stock for this item.</Text>}
+            />
+        </SafeAreaView>
+    );
+};
+
+const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: theme.colors.background,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: theme.colors.background,
+    },
+    headerContainer: {
+        padding: theme.spacing.lg,
+        backgroundColor: 'white',
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.border,
+    },
+    header: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: theme.colors.text,
+        marginBottom: 4,
+    },
+    subtext: {
+        fontSize: 13,
+        color: theme.colors.textLight,
+    },
+    list: {
+        padding: theme.spacing.sm,
+    },
+    card: {
+        flex: 1,
+        backgroundColor: 'white',
+        margin: theme.spacing.sm,
+        borderRadius: theme.borderRadius.lg,
+        overflow: 'hidden',
+        ...theme.shadows.soft,
+    },
+    image: {
+        height: 140,
+        width: '100%',
+        resizeMode: 'cover',
+        backgroundColor: '#f9fafb',
+    },
+    info: {
+        padding: theme.spacing.md,
+    },
+    serial: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: theme.colors.textLight,
+        marginBottom: 4,
+    },
+    price: {
+        fontSize: 16,
+        color: theme.colors.primaryDark,
+        fontWeight: '800',
+        marginBottom: 6,
+    },
+    cartButton: {
+        flexDirection: 'row',
+        paddingVertical: 10,
+        paddingHorizontal: 8,
+        borderRadius: theme.borderRadius.md,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    buttonText: {
+        color: 'white',
+        fontSize: 13,
+        fontWeight: 'bold'
+    },
+    empty: {
+        textAlign: 'center',
+        marginTop: 40,
+        color: theme.colors.textLight,
+        fontSize: 16,
+    }
+});
