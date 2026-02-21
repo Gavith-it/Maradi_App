@@ -8,7 +8,7 @@ const debuggerHost = Constants.expoConfig?.hostUri?.split(':')[0];
 
 // Production: set EXPO_PUBLIC_API_URL to your Vercel API URL (e.g. https://maradi-app-theta.vercel.app/api)
 // Local: uses localhost (web) or dev machine IP (mobile on same network)
-const envApiUrl = typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL;
+const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
 export const API_URL = envApiUrl
     ? (envApiUrl.endsWith('/api') ? envApiUrl : `${envApiUrl.replace(/\/$/, '')}/api`)
     : Platform.OS === 'web'
