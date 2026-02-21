@@ -9,7 +9,7 @@
       "src": "web-admin/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "web-admin/dist"
+        "distDir": "dist"
       }
     }
   ],
