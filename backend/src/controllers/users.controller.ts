@@ -27,14 +27,16 @@ export const getCustomers = async (req: Request, res: Response) => {
 };
 
 export const createCustomer = async (req: Request, res: Response) => {
-    const { email, password, company_name, phone, price_list_id, status } = req.body;
+    let { email, password, company_name, phone, price_list_id, status } = req.body;
 
     if (!email || !password) {
         return res.status(400).json({ message: 'Email and password are required' });
     }
 
+    email = email.toLowerCase().trim();
+
     try {
-        const existingUser = await query('SELECT * FROM users WHERE email = $1', [email]);
+        const existingUser = await query('SELECT * FROM users WHERE LOWER(email) = $1', [email]);
         if (existingUser.rows.length > 0) {
             return res.status(400).json({ message: 'User already exists' });
         }

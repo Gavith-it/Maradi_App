@@ -4,14 +4,16 @@ import { query } from '../db';
 import { generateToken } from '../utils/auth';
 
 export const register = async (req: Request, res: Response) => {
-    const { email, password, role, company_name, phone, price_list_id } = req.body;
+    let { email, password, role, company_name, phone, price_list_id } = req.body;
 
     if (!email || !password || !role) {
         return res.status(400).json({ message: 'Missing required fields' });
     }
 
+    email = email.toLowerCase().trim();
+
     try {
-        const existingUser = await query('SELECT * FROM users WHERE email = $1', [email]);
+        const existingUser = await query('SELECT * FROM users WHERE LOWER(email) = $1', [email]);
         if (existingUser.rows.length > 0) {
             return res.status(400).json({ message: 'User already exists' });
         }
@@ -35,10 +37,16 @@ export const register = async (req: Request, res: Response) => {
 };
 
 export const login = async (req: Request, res: Response) => {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    email = email.toLowerCase().trim();
 
     try {
-        const result = await query('SELECT * FROM users WHERE email = $1', [email]);
+        const result = await query('SELECT * FROM users WHERE LOWER(email) = $1', [email]);
         if (result.rows.length === 0) {
             return res.status(400).json({ message: 'User not found' });
         }
