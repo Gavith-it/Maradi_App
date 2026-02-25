@@ -8,7 +8,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const seedUsers = async () => {
     try {
         console.log('Seeding test users...');
-        const passwordAcc = '123456';
+        const passwordAcc = 'SecureMaradi#2026!';
         const hashedPassword = await bcrypt.hash(passwordAcc, 10);
 
         // 1. Internal User (Staff)
@@ -22,7 +22,11 @@ const seedUsers = async () => {
             );
             console.log(`Created Staff: ${staffEmail} / ${passwordAcc}`);
         } else {
-            console.log(`Staff user already exists: ${staffEmail}`);
+            await query(
+                `UPDATE users SET password_hash = $1 WHERE email = $2`,
+                [hashedPassword, staffEmail]
+            );
+            console.log(`Updated existing Staff password: ${staffEmail} / ${passwordAcc}`);
         }
 
         // 2. Customer User
@@ -36,7 +40,11 @@ const seedUsers = async () => {
             );
             console.log(`Created Customer: ${custEmail} / ${passwordAcc}`);
         } else {
-            console.log(`Customer user already exists: ${custEmail}`);
+            await query(
+                `UPDATE users SET password_hash = $1 WHERE email = $2`,
+                [hashedPassword, custEmail]
+            );
+            console.log(`Updated existing Customer password: ${custEmail} / ${passwordAcc}`);
         }
 
     } catch (error) {
