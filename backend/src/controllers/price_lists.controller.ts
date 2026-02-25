@@ -43,7 +43,7 @@ export const getPriceListItems = async (req: Request, res: Response) => {
             FROM items i
             LEFT JOIN price_list_items pli 
                 ON i.item_id = pli.item_id AND pli.price_list_id = $1
-            ORDER BY i.item_name ASC
+            ORDER BY i.created_at DESC
         `, [id]);
 
         res.json(result.rows);

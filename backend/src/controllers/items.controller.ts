@@ -43,10 +43,11 @@ export const getInStockItems = async (req: Request, res: Response) => {
             SELECT 
                 i.*, 
                 COALESCE(s_count.cnt, 0)::int as stock_quantity,
-                s_img.image_url
+                s_img.image_url,
+                s_count.latest_addition
             FROM items i
             INNER JOIN (
-                SELECT item_id, COUNT(*) as cnt 
+                SELECT item_id, COUNT(*) as cnt, MAX(date_added) as latest_addition
                 FROM serials 
                 WHERE status = 'available' 
                 GROUP BY item_id
@@ -58,7 +59,7 @@ export const getInStockItems = async (req: Request, res: Response) => {
                 ORDER BY item_id, date_added DESC
             ) s_img ON i.item_id = s_img.item_id
             WHERE i.is_active = true AND s_count.cnt > 0
-            ORDER BY i.item_name ASC
+            ORDER BY s_count.latest_addition DESC, i.created_at DESC
         `, []);
         res.json(result.rows);
     } catch (error) {
