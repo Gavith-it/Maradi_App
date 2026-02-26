@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, Image, Alert, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { Buffer } from 'buffer';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
@@ -17,10 +18,63 @@ export const AddStockScreen = () => {
 
     const [itemCode, setItemCode] = useState(route.params?.itemCode || '');
     const [serialNumber, setSerialNumber] = useState(route.params?.serialNumber || '');
+    const [quantity, setQuantity] = useState('1'); // New for bulk
     const [itemName, setItemName] = useState('');
+    const [itemCategory, setItemCategory] = useState(''); // New for logic
     const [fetchingName, setFetchingName] = useState(false);
-    const [imageUrl, setImageUrl] = useState<string | null>(null);
+    const [images, setImages] = useState<{ type: string, url: string }[]>([]); // New array
     const [loading, setLoading] = useState(false);
+
+    // Dynamic config based on category string or item name
+    const getCategoryConfig = () => {
+        const cat = (itemCategory + ' ' + itemName).toLowerCase().trim();
+        if (cat.includes('zari silk')) {
+            return {
+                type: 'serial',
+                requireSerial: true,
+                imageRequirements: [
+                    { type: 'pallu', label: 'Pallu (Master)' },
+                    { type: 'body', label: 'Body (Master)' },
+                    { type: 'border', label: 'Border (Master)' },
+                    { type: 'front', label: 'Front / Color (Serial)' }
+                ]
+            };
+        }
+        if (cat.includes('fabric')) {
+            return {
+                type: 'batch',
+                requireSerial: false,
+                batchLabel: 'Batch Number',
+                unit: 'Meters',
+                imageRequirements: [{ type: 'general', label: 'Fabric Batch Image' }]
+            };
+        }
+        if (cat.includes('other silk') || cat.includes('dothi') || cat.includes('accessories')) {
+            return {
+                type: 'none',
+                requireSerial: false,
+                unit: 'Units',
+                imageRequirements: [
+                    { type: 'general_1', label: 'Product Image 1' },
+                    { type: 'general_2', label: 'Product Image 2' }
+                ]
+            };
+        }
+
+        // Default (Assume it's a Saree/Zari Silk since that's the primary product)
+        return {
+            type: 'serial',
+            requireSerial: true,
+            imageRequirements: [
+                { type: 'pallu', label: 'Pallu (Master)' },
+                { type: 'body', label: 'Body (Master)' },
+                { type: 'border', label: 'Border (Master)' },
+                { type: 'front', label: 'Front / Color (Serial)' }
+            ]
+        };
+    };
+
+    const config = getCategoryConfig();
 
     useEffect(() => {
         if (route.params?.itemCode) {
@@ -37,20 +91,23 @@ export const AddStockScreen = () => {
             const response = await axios.get(`${API_URL}/items/${code}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            if (response.data && response.data.item_name) {
-                setItemName(response.data.item_name);
+            if (response.data) {
+                setItemName(response.data.item_name || '');
+                setItemCategory(response.data.category || 'General');
             } else {
                 setItemName('');
+                setItemCategory('');
             }
         } catch (error) {
             setItemName('');
+            setItemCategory('');
             // Optional: console.log('Item not found, assuming new item');
         } finally {
             setFetchingName(false);
         }
     };
 
-    const takePhoto = async () => {
+    const takePhoto = async (imageType: string) => {
         const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
 
         if (permissionResult.granted === false) {
@@ -62,32 +119,79 @@ export const AddStockScreen = () => {
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
             aspect: [4, 3],
-            quality: 0.5,
-            base64: true, // We need base64 to send to backend without S3
+            quality: 0.2, // Aggressive compression (was 0.5) to stay under Vercel's 4.5MB limit
+            base64: true,
         });
 
         if (!result.canceled && result.assets && result.assets.length > 0) {
             // Create a data URI
             const base64Img = `data:image/jpeg;base64,${result.assets[0].base64}`;
-            setImageUrl(base64Img);
+
+            // Update the specific image type in the array
+            setImages(prev => {
+                const existingIndex = prev.findIndex(img => img.type === imageType);
+                if (existingIndex >= 0) {
+                    const newArray = [...prev];
+                    newArray[existingIndex] = { type: imageType, url: base64Img };
+                    return newArray;
+                }
+                return [...prev, { type: imageType, url: base64Img }];
+            });
         }
     };
 
     const handleSubmit = async () => {
-        if (!itemCode || !serialNumber) {
-            Alert.alert('Error', 'Item Code and Serial Number are required');
+        if (!itemCode) {
+            Alert.alert('Error', 'Item Code is required');
+            return;
+        }
+
+        if (config.requireSerial && !serialNumber) {
+            Alert.alert('Error', 'Serial Number is required for this product type.');
+            return;
+        }
+
+        if (images.length < config.imageRequirements.length) {
+            Alert.alert('Error', `Please capture all ${config.imageRequirements.length} required images for this category.`);
             return;
         }
 
         setLoading(true);
         try {
+            // STEP 1 & 2: CONVERT BASE64 IMAGES AND UPLOAD DIRECTLY TO S3 FIRST
+            const uploadedImages = [];
+
+            for (const img of images) {
+                // 1. Ask backend for an S3 Presigned URL
+                const response = await axios.get(`${API_URL}/items/upload-url?extension=jpg`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const { uploadUrl, finalUrl } = response.data;
+
+                // 2. Convert base64 dataURI to binary Blob
+                const base64Data = img.url.replace(/^data:image\/\w+;base64,/, '');
+                const binaryData = Buffer.from(base64Data, 'base64');
+
+                // 3. Upload raw binary to AWS S3 using PUT Request
+                await fetch(uploadUrl, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'image/jpeg' },
+                    body: binaryData
+                });
+
+                // 4. Save the finalized AWS S3 public image URL to send to our Node API in step 5
+                uploadedImages.push({ type: img.type, url: finalUrl });
+            }
+
+            // STEP 3: Add stock record to the database pointing to the new S3 URLs
             await axios.post(`${API_URL}/items/stock`, {
                 item_code: itemCode,
                 serial_number: serialNumber,
-                image_url: imageUrl || 'https://via.placeholder.com/300', // Use captured image or placeholder
+                quantity,
+                images: uploadedImages, // Use the new AWS S3 URLs here!
                 user_id: user?.id,
-                // Passing the name also allows the backend to update/insert if it is brand new
-                item_name: itemName || 'Unknown Item'
+                item_name: itemName || `Item ${itemCode}`,
+                category: itemCategory || 'Uncategorized'
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -158,37 +262,84 @@ export const AddStockScreen = () => {
                         />
                     </View>
 
-                    <Text style={styles.label}>Serial Number</Text>
-                    <View style={styles.inputWrapper}>
-                        <Barcode color={theme.colors.textLight} size={20} style={styles.inputIcon} />
-                        <TextInput
-                            style={styles.input}
-                            value={serialNumber}
-                            onChangeText={setSerialNumber}
-                            placeholder="E1234..."
-                            placeholderTextColor={theme.colors.textLight}
-                        />
-                        <TouchableOpacity style={styles.scanButtonMini} onPress={() => navigation.navigate('ScanQR', { mode: 'add_stock', currentItemCode: itemCode, currentSerialNumber: serialNumber })}>
-                            <Barcode color="white" size={16} />
-                            <Text style={styles.scanButtonMiniText}>SCAN</Text>
-                        </TouchableOpacity>
-                    </View>
+                    {/* Dynamic Fields based on Category config */}
+                    {config.requireSerial ? (
+                        <>
+                            <Text style={styles.label}>Serial Number</Text>
+                            <View style={styles.inputWrapper}>
+                                <Barcode color={theme.colors.textLight} size={20} style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.input}
+                                    value={serialNumber}
+                                    onChangeText={setSerialNumber}
+                                    placeholder="E1234..."
+                                    placeholderTextColor={theme.colors.textLight}
+                                />
+                                <TouchableOpacity style={styles.scanButtonMini} onPress={() => navigation.navigate('ScanQR', { mode: 'add_stock', currentItemCode: itemCode, currentSerialNumber: serialNumber })}>
+                                    <Barcode color="white" size={16} />
+                                    <Text style={styles.scanButtonMiniText}>SCAN</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </>
+                    ) : (
+                        <>
+                            {config.type === 'batch' && (
+                                <>
+                                    <Text style={styles.label}>{config.batchLabel}</Text>
+                                    <View style={styles.inputWrapper}>
+                                        <Barcode color={theme.colors.textLight} size={20} style={styles.inputIcon} />
+                                        <TextInput
+                                            style={styles.input}
+                                            value={serialNumber}
+                                            onChangeText={setSerialNumber}
+                                            placeholder="Batch Code (Optional)"
+                                            placeholderTextColor={theme.colors.textLight}
+                                        />
+                                    </View>
+                                </>
+                            )}
+                            <Text style={styles.label}>Quantity ({config.unit})</Text>
+                            <View style={styles.inputWrapper}>
+                                <Tag color={theme.colors.textLight} size={20} style={styles.inputIcon} />
+                                <TextInput
+                                    keyboardType='numeric'
+                                    style={styles.input}
+                                    value={quantity}
+                                    onChangeText={setQuantity}
+                                    placeholder="1"
+                                    placeholderTextColor={theme.colors.textLight}
+                                />
+                            </View>
+                        </>
+                    )}
                 </View>
 
+                {/* Dynamic Image Requirements */}
                 <View style={styles.card}>
-                    <Text style={styles.label}>Product Image</Text>
-                    <TouchableOpacity onPress={takePhoto} style={styles.imagePlaceholder} activeOpacity={0.8}>
-                        {imageUrl ? (
-                            <Image source={{ uri: imageUrl }} style={styles.capturedImage} />
-                        ) : (
-                            <View style={styles.placeholderContent}>
-                                <View style={styles.cameraIconBg}>
-                                    <Camera size={32} color={theme.colors.primary} />
+                    <Text style={[styles.label, { marginBottom: 12 }]}>Required Images ({config.imageRequirements.length})</Text>
+
+                    <View style={{ gap: theme.spacing.lg }}>
+                        {config.imageRequirements.map((req, index) => {
+                            const thisImg = images.find(i => i.type === req.type);
+                            return (
+                                <View key={req.type} style={{ width: '100%' }}>
+                                    <Text style={styles.imageLabelText}>{index + 1}. {req.label}</Text>
+                                    <TouchableOpacity onPress={() => takePhoto(req.type)} style={config.imageRequirements.length > 2 ? styles.imagePlaceholderSmall : styles.imagePlaceholder} activeOpacity={0.8}>
+                                        {thisImg ? (
+                                            <Image source={{ uri: thisImg.url }} style={styles.capturedImage} />
+                                        ) : (
+                                            <View style={styles.placeholderContent}>
+                                                <View style={styles.cameraIconBg}>
+                                                    <Camera size={24} color={theme.colors.primary} />
+                                                </View>
+                                                <Text style={styles.placeholderText}>Tap to Capture</Text>
+                                            </View>
+                                        )}
+                                    </TouchableOpacity>
                                 </View>
-                                <Text style={styles.placeholderText}>Tap to Capture Photo</Text>
-                            </View>
-                        )}
-                    </TouchableOpacity>
+                            );
+                        })}
+                    </View>
                 </View>
 
                 <TouchableOpacity
@@ -268,7 +419,7 @@ const styles = StyleSheet.create({
         marginLeft: 4,
     },
     imagePlaceholder: {
-        height: 220,
+        height: 200,
         backgroundColor: '#f9fafb',
         justifyContent: 'center',
         alignItems: 'center',
@@ -277,6 +428,24 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: theme.colors.border,
         borderStyle: 'dashed'
+    },
+    imagePlaceholderSmall: {
+        height: 140,
+        backgroundColor: '#f9fafb',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: theme.borderRadius.md,
+        overflow: 'hidden',
+        borderWidth: 2,
+        borderColor: theme.colors.border,
+        borderStyle: 'dashed'
+    },
+    imageLabelText: {
+        fontWeight: '600',
+        color: theme.colors.textLight,
+        fontSize: 13,
+        marginBottom: 6,
+        textTransform: 'uppercase'
     },
     placeholderContent: {
         alignItems: 'center',

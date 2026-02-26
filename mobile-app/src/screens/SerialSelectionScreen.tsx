@@ -17,6 +17,7 @@ interface Serial {
     status: string;
     item_name: string;
     master_price: string;
+    master_images?: { type: string, url: string }[];
 }
 
 export const SerialSelectionScreen = () => {
@@ -24,6 +25,7 @@ export const SerialSelectionScreen = () => {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const { itemCode, itemName } = route.params;
     const [serials, setSerials] = useState<Serial[]>([]);
+    const [masterImages, setMasterImages] = useState<{ type: string, url: string }[]>([]);
     const [loading, setLoading] = useState(true);
     const { token } = useAuthStore();
 
@@ -36,7 +38,13 @@ export const SerialSelectionScreen = () => {
             const response = await axios.get(`${API_URL}/items/${itemCode}/serials`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setSerials(response.data);
+            const data: Serial[] = response.data;
+            setSerials(data);
+
+            if (data.length > 0 && data[0].master_images) {
+                const validMasterImgs = data[0].master_images.filter(img => img && img.url);
+                setMasterImages(validMasterImgs);
+            }
         } catch (error) {
             console.error(error);
             Alert.alert('Error', 'Failed to fetch serials');
@@ -83,6 +91,28 @@ export const SerialSelectionScreen = () => {
         </View>
     );
 
+    const renderHeader = () => {
+        if (masterImages.length === 0) return null;
+        return (
+            <View style={styles.masterGalleryContainer}>
+                <Text style={styles.galleryTitle}>Model View / Master Images</Text>
+                <FlatList
+                    data={masterImages}
+                    horizontal
+                    keyExtractor={(img, idx) => img.type + idx}
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.galleryList}
+                    renderItem={({ item }) => (
+                        <View style={styles.masterImageCard}>
+                            <Image source={{ uri: item.url }} style={styles.masterImage} />
+                            <Text style={styles.masterImageLabel}>{item.type.toUpperCase()}</Text>
+                        </View>
+                    )}
+                />
+            </View>
+        );
+    };
+
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
@@ -104,6 +134,7 @@ export const SerialSelectionScreen = () => {
                 numColumns={2}
                 contentContainerStyle={styles.list}
                 showsVerticalScrollIndicator={false}
+                ListHeaderComponent={renderHeader}
                 ListEmptyComponent={<Text style={styles.empty}>No available stock for this item.</Text>}
             />
         </SafeAreaView>
@@ -187,5 +218,39 @@ const styles = StyleSheet.create({
         marginTop: 40,
         color: theme.colors.textLight,
         fontSize: 16,
+    },
+    masterGalleryContainer: {
+        backgroundColor: 'white',
+        paddingVertical: theme.spacing.md,
+        marginBottom: theme.spacing.lg,
+        borderBottomWidth: 1,
+        borderColor: theme.colors.border,
+        width: '100%'
+    },
+    galleryTitle: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: theme.colors.textLight,
+        paddingHorizontal: theme.spacing.sm,
+        marginBottom: theme.spacing.md,
+    },
+    galleryList: {
+        paddingHorizontal: theme.spacing.sm,
+    },
+    masterImageCard: {
+        marginRight: theme.spacing.md,
+        alignItems: 'center',
+    },
+    masterImage: {
+        width: 140,
+        height: 180,
+        borderRadius: theme.borderRadius.md,
+        backgroundColor: '#f1f5f9',
+        marginBottom: 4,
+    },
+    masterImageLabel: {
+        fontSize: 10,
+        fontWeight: '600',
+        color: theme.colors.textLight,
     }
 });

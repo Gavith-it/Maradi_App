@@ -15,7 +15,7 @@ export const Inventory = () => {
 
     // Add Item State
     const [showAddModal, setShowAddModal] = useState(false);
-    const [addForm, setAddForm] = useState({ item_code: '', item_name: '', master_price: '', category: 'General', serial_number: '' });
+    const [addForm, setAddForm] = useState({ item_code: '', item_name: '', master_price: '', category: 'General', serial_number: '', quantity: '1' });
 
     useEffect(() => {
         fetchItems();
@@ -48,21 +48,39 @@ export const Inventory = () => {
         }
     };
 
+    const getCategoryConfig = (cat: string) => {
+        const lowerCat = (cat + ' ' + addForm.item_name).toLowerCase().trim();
+        if (lowerCat.includes('fabric')) return { type: 'batch', unit: 'Meters', requireSerial: false };
+        if (lowerCat.includes('other silk') || lowerCat.includes('dothi') || lowerCat.includes('accessories')) return { type: 'none', unit: 'Each', requireSerial: false };
+        // Default to Zari Silk / Saree serial tracking
+        return { type: 'serial', unit: 'Each', requireSerial: true };
+    };
+
     const handleCreateItem = async () => {
-        // Validation: Serial Number is now mandatory
-        if (!addForm.item_code || !addForm.item_name || !addForm.master_price || !addForm.serial_number) {
-            alert('Please fill in ALL required fields, including Serial Number.');
+        const config = getCategoryConfig(addForm.category);
+
+        // Validation: Serial/Batch Number is conditional
+        if (!addForm.item_code || !addForm.item_name || !addForm.master_price) {
+            alert('Please fill in ALL required fields.');
+            return;
+        }
+
+        if (config.requireSerial && !addForm.serial_number) {
+            alert('Serial number is required for this category.');
             return;
         }
 
         try {
             await api.post('/items', {
                 ...addForm,
-                master_price: parseFloat(addForm.master_price)
+                master_price: parseFloat(addForm.master_price),
+                inventory_type: config.type,
+                unit_of_measure: config.unit,
+                quantity: parseInt(addForm.quantity) || 1
             });
             alert('Item created successfully');
             setShowAddModal(false);
-            setAddForm({ item_code: '', item_name: '', master_price: '', category: 'General', serial_number: '' });
+            setAddForm({ item_code: '', item_name: '', master_price: '', category: 'General', serial_number: '', quantity: '1' });
             fetchItems();
         } catch (error: any) {
             console.error('Create failed', error);
@@ -320,19 +338,49 @@ export const Inventory = () => {
                                         className="input"
                                         value={addForm.category}
                                         onChange={e => setAddForm({ ...addForm, category: e.target.value })}
-                                        placeholder="General"
+                                        placeholder="e.g. Sarees - Zari Silk, Fabrics"
                                     />
                                 </div>
                             </div>
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>Initial Serial Number (Required)</label>
-                                <input
-                                    className="input"
-                                    value={addForm.serial_number}
-                                    onChange={e => setAddForm({ ...addForm, serial_number: e.target.value })}
-                                    placeholder="e.g. SN-001"
-                                />
-                            </div>
+
+                            {/* Dynamic Fields based on Category */}
+                            {getCategoryConfig(addForm.category).requireSerial ? (
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>Initial Serial Number (Required)</label>
+                                    <input
+                                        className="input"
+                                        value={addForm.serial_number}
+                                        onChange={e => setAddForm({ ...addForm, serial_number: e.target.value })}
+                                        placeholder="e.g. SN-001"
+                                    />
+                                </div>
+                            ) : (
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    {getCategoryConfig(addForm.category).type === 'batch' && (
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>Batch Number (Optional)</label>
+                                            <input
+                                                className="input"
+                                                value={addForm.serial_number}
+                                                onChange={e => setAddForm({ ...addForm, serial_number: e.target.value })}
+                                                placeholder="e.g. BATCH-A1"
+                                            />
+                                        </div>
+                                    )}
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
+                                            Initial Quantity ({getCategoryConfig(addForm.category).unit})
+                                        </label>
+                                        <input
+                                            className="input"
+                                            value={addForm.quantity}
+                                            onChange={e => setAddForm({ ...addForm, quantity: e.target.value })}
+                                            placeholder="1"
+                                            type="number"
+                                        />
+                                    </div>
+                                </div>
+                            )}
 
                             <button
                                 onClick={handleCreateItem}
@@ -370,11 +418,27 @@ export const Inventory = () => {
                         </div>
 
                         <div style={{ display: 'flex', gap: '2rem', marginBottom: '2.5rem' }}>
-                            <div className="card" style={{ width: '220px', height: '220px', padding: 0, overflow: 'hidden', flexShrink: 0 }}>
-                                {selectedItem.image_url ? (
-                                    <img src={selectedItem.image_url} alt="Item" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                ) : (
-                                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#9ca3af' }}>No Image</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flexShrink: 0 }}>
+                                <div className="card" style={{ width: '220px', height: '220px', padding: 0, overflow: 'hidden' }}>
+                                    {selectedItem.image_url ? (
+                                        <img src={selectedItem.image_url} alt="Item" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#9ca3af' }}>No Image</div>
+                                    )}
+                                </div>
+
+                                {(selectedItem as any).master_images && (selectedItem as any).master_images.filter((img: any) => img && img.url).length > 0 && (
+                                    <div>
+                                        <p style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Master View Images</p>
+                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', width: '220px' }}>
+                                            {(selectedItem as any).master_images.filter((img: any) => img && img.url).map((img: any, idx: number) => (
+                                                <div key={idx} style={{ width: '68px' }}>
+                                                    <img src={img.url} alt={img.type} style={{ width: '100%', height: '68px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border-color)' }} />
+                                                    <div style={{ fontSize: '0.65rem', textAlign: 'center', marginTop: '2px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>{img.type}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 )}
                             </div>
 
