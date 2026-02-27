@@ -11,7 +11,8 @@ import {
     updateItem,
     deleteItem,
     addMasterImages,
-    updateSerial
+    updateSerial,
+    markSerialSold
 } from '../controllers/items.controller';
 import { authenticateToken } from '../utils/auth';
 
@@ -26,6 +27,7 @@ router.get('/:code', authenticateToken, getItemByCode);
 router.post('/stock', authenticateToken, addStock);
 router.post('/:code/master-images', authenticateToken, addMasterImages);
 router.put('/serial/:id', authenticateToken, updateSerial);
+router.put('/serial/:id/sold', authenticateToken, markSerialSold);
 
 // Admin Routes
 router.post('/', authenticateToken, createItem);

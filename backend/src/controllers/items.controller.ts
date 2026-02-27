@@ -449,6 +449,31 @@ export const updateSerial = async (req: Request, res: Response) => {
         if (error.code === '23505') {
             return res.status(400).json({ message: 'Serial number already exists' });
         }
-        res.status(500).json({ message: error.message || 'Server error' });
+        res.status(500).json({ message: 'Server error updating serial' });
+    }
+};
+
+// PUT /api/items/serial/:id/sold
+// Marks an individual serial as sold.
+export const markSerialSold = async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    try {
+        const result = await pool.query(
+            `UPDATE serials 
+             SET status = 'sold', sold_date = CURRENT_TIMESTAMP 
+             WHERE serial_id = $1 AND status != 'sold'
+             RETURNING *`,
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Serial not found or already sold' });
+        }
+
+        res.status(200).json({ message: 'Stock marked as sold successfully', serial: result.rows[0] });
+    } catch (error: any) {
+        console.error('Error marking serial sold:', error);
+        res.status(500).json({ message: 'Server error marking serial sold' });
     }
 };

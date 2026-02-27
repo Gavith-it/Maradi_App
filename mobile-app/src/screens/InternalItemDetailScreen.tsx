@@ -6,7 +6,7 @@ import { RootStackParamList } from '../types/navigation';
 import axios from 'axios';
 import { useAuthStore, API_URL } from '../store/useAuthStore';
 import { theme } from '../styles/theme';
-import { ArrowLeft, Box, Camera, Edit3, X, Maximize2 } from 'lucide-react-native';
+import { ArrowLeft, Box, Camera, Edit3, X, Maximize2, CheckCircle } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Buffer } from 'buffer';
 
@@ -217,6 +217,32 @@ export const InternalItemDetailScreen = () => {
         }
     };
 
+    const handleMarkAsSold = (serialId: number, serialNumber: string) => {
+        Alert.alert(
+            "Mark as Sold",
+            `Are you sure you want to mark serial ${serialNumber} as sold? It will be removed from available stock.`,
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Mark Sold",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            await axios.put(`${API_URL}/items/serial/${serialId}/sold`, {}, {
+                                headers: { Authorization: `Bearer ${token}` }
+                            });
+                            Alert.alert("Success", "Item marked as sold.");
+                            fetchAvailableSerials(); // Refresh the list
+                        } catch (error: any) {
+                            console.error('Mark Sold Error:', error.message);
+                            Alert.alert("Error", "Failed to mark item as sold.");
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     const renderSerialItem = ({ item }: { item: Serial }) => (
         <View style={styles.serialCard}>
             <TouchableOpacity onPress={() => {
@@ -237,17 +263,25 @@ export const InternalItemDetailScreen = () => {
                 <Text style={styles.serialNumber}>{item.serial_number}</Text>
                 <Text style={styles.serialDate}>Added: {new Date(item.date_added).toLocaleDateString()}</Text>
             </View>
-            <TouchableOpacity
-                onPress={() => {
-                    setEditingSerial(item);
-                    setEditSerialNumber(item.serial_number);
-                    setEditSerialImage(item.image_url || null);
-                    setSerialEditModalVisible(true);
-                }}
-                style={styles.editSerialBtn}
-            >
-                <Edit3 size={18} color={theme.colors.primary} />
-            </TouchableOpacity>
+            <View style={styles.actionButtons}>
+                <TouchableOpacity
+                    onPress={() => handleMarkAsSold(item.serial_id, item.serial_number)}
+                    style={styles.actionBtn}
+                >
+                    <CheckCircle size={18} color="#10b981" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                    onPress={() => {
+                        setEditingSerial(item);
+                        setEditSerialNumber(item.serial_number);
+                        setEditSerialImage(item.image_url || null);
+                        setSerialEditModalVisible(true);
+                    }}
+                    style={styles.actionBtn}
+                >
+                    <Edit3 size={18} color={theme.colors.primary} />
+                </TouchableOpacity>
+            </View>
         </View>
     );
 
@@ -660,7 +694,11 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 16
     },
-    editSerialBtn: {
+    actionButtons: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    actionBtn: {
         padding: theme.spacing.sm,
         marginLeft: theme.spacing.sm,
         backgroundColor: '#f0f9ff',
