@@ -212,6 +212,7 @@ const styles = StyleSheet.create({
     },
     card: {
         flex: 1,
+        maxWidth: '46.5%',
         backgroundColor: 'white',
         margin: theme.spacing.sm,
         borderRadius: theme.borderRadius.lg,
