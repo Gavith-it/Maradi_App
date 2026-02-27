@@ -110,8 +110,7 @@ export const AddStockScreen = () => {
 
         const result = await ImagePicker.launchCameraAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [4, 3],
+            allowsEditing: false, // Disabled cropping to allow full saree images
             quality: 0.2, // Aggressive compression (was 0.5) to stay under Vercel's 4.5MB limit
             base64: true,
         });
