@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -8,7 +8,7 @@ import axios from 'axios';
 import { useAuthStore, API_URL } from '../store/useAuthStore';
 import { theme } from '../styles/theme';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ShoppingCart } from 'lucide-react-native';
+import { ShoppingCart, Maximize2, X } from 'lucide-react-native';
 
 interface Serial {
     serial_id: number;
@@ -28,6 +28,10 @@ export const SerialSelectionScreen = () => {
     const [masterImages, setMasterImages] = useState<{ type: string, url: string }[]>([]);
     const [loading, setLoading] = useState(true);
     const { token } = useAuthStore();
+
+    // Image Viewer State
+    const [viewerVisible, setViewerVisible] = useState(false);
+    const [viewerImage, setViewerImage] = useState<string | null>(null);
 
     useEffect(() => {
         fetchSerials();
@@ -69,10 +73,23 @@ export const SerialSelectionScreen = () => {
 
     const renderItem = ({ item }: { item: Serial }) => (
         <View style={styles.card}>
-            <Image
-                source={{ uri: item.image_url || 'https://via.placeholder.com/150' }}
-                style={styles.image}
-            />
+            <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => {
+                    if (item.image_url) {
+                        setViewerImage(item.image_url);
+                        setViewerVisible(true);
+                    }
+                }}
+            >
+                <Image
+                    source={{ uri: item.image_url || 'https://via.placeholder.com/150' }}
+                    style={styles.image}
+                />
+                <View style={styles.expandIconContainer}>
+                    <Maximize2 size={16} color="white" />
+                </View>
+            </TouchableOpacity>
             <View style={styles.info}>
                 <Text style={styles.serial}>SN: {item.serial_number}</Text>
                 <Text style={styles.price}>₹{item.master_price}</Text>
@@ -103,10 +120,20 @@ export const SerialSelectionScreen = () => {
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.galleryList}
                     renderItem={({ item }) => (
-                        <View style={styles.masterImageCard}>
+                        <TouchableOpacity
+                            style={styles.masterImageCard}
+                            activeOpacity={0.8}
+                            onPress={() => {
+                                setViewerImage(item.url);
+                                setViewerVisible(true);
+                            }}
+                        >
                             <Image source={{ uri: item.url }} style={styles.masterImage} />
+                            <View style={styles.expandIconContainerSmall}>
+                                <Maximize2 size={12} color="white" />
+                            </View>
                             <Text style={styles.masterImageLabel}>{item.type.toUpperCase()}</Text>
-                        </View>
+                        </TouchableOpacity>
                     )}
                 />
             </View>
@@ -137,6 +164,18 @@ export const SerialSelectionScreen = () => {
                 ListHeaderComponent={renderHeader}
                 ListEmptyComponent={<Text style={styles.empty}>No available stock for this item.</Text>}
             />
+
+            {/* Full Screen Image Viewer Modal */}
+            <Modal visible={viewerVisible} transparent={true} animationType="fade">
+                <View style={styles.viewerContainer}>
+                    <TouchableOpacity style={styles.viewerCloseBtn} onPress={() => setViewerVisible(false)}>
+                        <X size={28} color="white" />
+                    </TouchableOpacity>
+                    {viewerImage && (
+                        <Image source={{ uri: viewerImage }} style={styles.viewerImage} resizeMode="contain" />
+                    )}
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 };
@@ -252,5 +291,40 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: '600',
         color: theme.colors.textLight,
+    },
+    expandIconContainer: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        padding: 6,
+        borderRadius: 20,
+    },
+    expandIconContainerSmall: {
+        position: 'absolute',
+        top: 4,
+        right: 4,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        padding: 4,
+        borderRadius: 12,
+    },
+    viewerContainer: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.9)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    viewerCloseBtn: {
+        position: 'absolute',
+        bottom: 50,
+        alignSelf: 'center',
+        zIndex: 10,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        padding: 16,
+        borderRadius: 35,
+    },
+    viewerImage: {
+        width: '100%',
+        height: '80%',
     }
 });
