@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     card: {
         flexDirection: 'row',
         backgroundColor: 'white',
-        marginBottom: theme.spacing.sm,
+        marginBottom: theme.spacing.md,
         borderRadius: theme.borderRadius.lg,
         padding: theme.spacing.md,
         alignItems: 'center',
@@ -244,7 +244,6 @@ const styles = StyleSheet.create({
     actionsContainer: {
         alignItems: 'flex-end',
         justifyContent: 'space-between',
-        height: '100%',
         paddingVertical: 4,
     },
     timerWrapper: {
