@@ -147,6 +147,7 @@ const styles = StyleSheet.create({
     },
     card: {
         flex: 1,
+        maxWidth: '46.5%', // Prevents odd items from expanding full width
         backgroundColor: 'white',
         margin: theme.spacing.sm,
         borderRadius: theme.borderRadius.lg,
