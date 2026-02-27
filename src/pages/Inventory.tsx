@@ -397,12 +397,12 @@ export const Inventory = () => {
             {/* Item Details Modal */}
             {selectedItem && (
                 <div className="modal-overlay">
-                    <div className="modal-content" style={{ maxWidth: '900px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', alignItems: 'center' }}>
+                    <div className="modal-content" style={{ maxWidth: '900px', width: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                             <h2 style={{ fontSize: '1.75rem', fontWeight: 'bold' }}>
                                 {isEditing ? 'Edit Item' : 'Item Details'}
                             </h2>
-                            <div style={{ display: 'flex', gap: '0.75rem' }}>
+                            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                                 {!isEditing && (
                                     <>
                                         <button onClick={() => setIsEditing(true)} className="btn btn-secondary">
@@ -427,19 +427,17 @@ export const Inventory = () => {
                                     )}
                                 </div>
 
-                                {(selectedItem as any).master_images && (selectedItem as any).master_images.filter((img: any) => img && img.url).length > 0 && (
-                                    <div>
-                                        <p style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Master View Images</p>
-                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', width: '220px' }}>
-                                            {(selectedItem as any).master_images.filter((img: any) => img && img.url).map((img: any, idx: number) => (
-                                                <div key={idx} style={{ width: '68px' }}>
-                                                    <img src={img.url} alt={img.type} style={{ width: '100%', height: '68px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border-color)' }} />
-                                                    <div style={{ fontSize: '0.65rem', textAlign: 'center', marginTop: '2px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>{img.type}</div>
-                                                </div>
-                                            ))}
-                                        </div>
+                                <div>
+                                    <p style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Master View Images</p>
+                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', width: '220px' }}>
+                                        {(selectedItem as any).master_images.filter((img: any) => img && img.url).map((img: any, idx: number) => (
+                                            <div key={idx} style={{ width: '68px' }}>
+                                                <img src={img.url} alt={img.type} style={{ width: '100%', height: '68px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border-color)' }} />
+                                                <div style={{ fontSize: '0.65rem', textAlign: 'center', marginTop: '2px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>{img.type}</div>
+                                            </div>
+                                        ))}
                                     </div>
-                                )}
+                                </div>
                             </div>
 
                             <div style={{ flex: 1 }}>

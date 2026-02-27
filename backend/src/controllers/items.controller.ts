@@ -109,13 +109,13 @@ export const getItemByCode = async (req: Request, res: Response) => {
 };
 
 export const addStock = async (req: Request, res: Response) => {
-    // Expected payload: { item_code, serial_number (optional), images: [{type, url}], quantity (optional), user_id, item_name, category }
+    // Expected payload: { item_code, serial_number (optional), image_url: string, quantity (optional), user_id, item_name, category }
 
-    const { item_code, serial_number, images, quantity, user_id, item_name, category } = req.body;
+    const { item_code, serial_number, image_url, quantity, user_id, item_name, category } = req.body;
     const stockQuantity = quantity ? parseInt(quantity, 10) : 1;
 
-    // Validate images format
-    const imageList = Array.isArray(images) ? images : [{ type: 'front', url: req.body.image_url || 'https://via.placeholder.com/300' }];
+    // Fallback if no image provided
+    const serialImageUrl = image_url || 'https://via.placeholder.com/300';
 
     const client = await pool.connect();
     try {
@@ -147,20 +147,7 @@ export const addStock = async (req: Request, res: Response) => {
             invType = itemResult.rows[0].inventory_type;
         }
 
-        // 2. Insert Master Images (pallu, body, border, general)
-        const masterImages = imageList.filter(img => ['pallu', 'body', 'border', 'general'].includes(img.type));
-        for (const img of masterImages) {
-            await client.query(
-                `INSERT INTO item_images (item_id, image_type, image_url, is_master) VALUES ($1, $2, $3, true)`,
-                [itemId, img.type, img.url]
-            );
-        }
-
-        // 3. Find the specific Serial/Item image
-        const serialImageObj = imageList.find(img => img.type === 'serial' || img.type === 'front');
-        const serialImageUrl = serialImageObj ? serialImageObj.url : (imageList[0]?.url || 'https://via.placeholder.com/300');
-
-        // 4. Handle Serial / Batch / Bulk insertion
+        // 2. Handle Serial / Batch / Bulk insertion
         let insertedSerialCode = serial_number;
 
         if (invType === 'serial') {
@@ -379,5 +366,89 @@ export const getUploadUrl = async (req: Request, res: Response) => {
     } catch (error) {
         console.error('Error generating presigned URL:', error);
         res.status(500).json({ message: 'Error generating upload URL' });
+    }
+};
+
+// Add/Update Master Images (Pallu, Body, Border, etc.)
+export const addMasterImages = async (req: Request, res: Response) => {
+    const { code } = req.params;
+    const { images } = req.body; // Expected format: [{ type: 'pallu', url: 'https...' }, ...]
+
+    if (!images || !Array.isArray(images)) {
+        return res.status(400).json({ message: 'Images array is required' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // 1. Get the item_id for this code
+        const itemResult = await client.query('SELECT item_id FROM items WHERE item_code = $1', [code]);
+        if (itemResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ message: 'Item code not found' });
+        }
+        const itemId = itemResult.rows[0].item_id;
+
+        // 2. Delete existing master images of these types for this item to avoid duplicates overlapping
+        for (const img of images) {
+            await client.query(
+                'DELETE FROM item_images WHERE item_id = $1 AND image_type = $2 AND is_master = true',
+                [itemId, img.type]
+            );
+        }
+
+        // 3. Insert the new master images
+        for (const img of images) {
+            if (['pallu', 'body', 'border', 'general'].includes(img.type) && img.url) {
+                await client.query(
+                    `INSERT INTO item_images (item_id, image_type, image_url, is_master) VALUES ($1, $2, $3, true)`,
+                    [itemId, img.type, img.url]
+                );
+            }
+        }
+
+        await client.query('COMMIT');
+        res.status(200).json({ message: 'Master images updated successfully' });
+    } catch (error: any) {
+        await client.query('ROLLBACK');
+        console.error('Error saving master images:', error);
+        res.status(500).json({ message: error.message || 'Server error' });
+    } finally {
+        client.release();
+    }
+};
+
+// PUT /api/items/serial/:id
+// Edit an individual serial's number and/or image.
+export const updateSerial = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { serial_number, image_url } = req.body;
+
+    if (!serial_number) {
+        return res.status(400).json({ message: 'Serial number is required' });
+    }
+
+    try {
+        const result = await pool.query(
+            `UPDATE serials 
+             SET serial_number = $1, image_url = $2 
+             WHERE serial_id = $3 
+             RETURNING *`,
+            [serial_number, image_url, id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Serial not found' });
+        }
+
+        res.status(200).json({ message: 'Serial updated successfully', serial: result.rows[0] });
+    } catch (error: any) {
+        console.error('Error updating serial:', error);
+        // Check for unique constraint violation on serial_number
+        if (error.code === '23505') {
+            return res.status(400).json({ message: 'Serial number already exists' });
+        }
+        res.status(500).json({ message: error.message || 'Server error' });
     }
 };

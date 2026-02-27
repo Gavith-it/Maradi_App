@@ -33,10 +33,7 @@ export const AddStockScreen = () => {
                 type: 'serial',
                 requireSerial: true,
                 imageRequirements: [
-                    { type: 'pallu', label: 'Pallu (Master)' },
-                    { type: 'body', label: 'Body (Master)' },
-                    { type: 'border', label: 'Border (Master)' },
-                    { type: 'front', label: 'Front / Color (Serial)' }
+                    { type: 'front', label: 'Front / Color Image' }
                 ]
             };
         }
@@ -46,7 +43,7 @@ export const AddStockScreen = () => {
                 requireSerial: false,
                 batchLabel: 'Batch Number',
                 unit: 'Meters',
-                imageRequirements: [{ type: 'general', label: 'Fabric Batch Image' }]
+                imageRequirements: [{ type: 'front', label: 'Fabric Batch Image' }]
             };
         }
         if (cat.includes('other silk') || cat.includes('dothi') || cat.includes('accessories')) {
@@ -55,8 +52,7 @@ export const AddStockScreen = () => {
                 requireSerial: false,
                 unit: 'Units',
                 imageRequirements: [
-                    { type: 'general_1', label: 'Product Image 1' },
-                    { type: 'general_2', label: 'Product Image 2' }
+                    { type: 'front', label: 'Product Image' }
                 ]
             };
         }
@@ -66,10 +62,7 @@ export const AddStockScreen = () => {
             type: 'serial',
             requireSerial: true,
             imageRequirements: [
-                { type: 'pallu', label: 'Pallu (Master)' },
-                { type: 'body', label: 'Body (Master)' },
-                { type: 'border', label: 'Border (Master)' },
-                { type: 'front', label: 'Front / Color (Serial)' }
+                { type: 'front', label: 'Front / Color Image' }
             ]
         };
     };
@@ -183,12 +176,12 @@ export const AddStockScreen = () => {
                 uploadedImages.push({ type: img.type, url: finalUrl });
             }
 
-            // STEP 3: Add stock record to the database pointing to the new S3 URLs
+            // STEP 3: Add stock record to the database pointing to the new S3 URL
             await axios.post(`${API_URL}/items/stock`, {
                 item_code: itemCode,
                 serial_number: serialNumber,
                 quantity,
-                images: uploadedImages, // Use the new AWS S3 URLs here!
+                image_url: uploadedImages.length > 0 ? uploadedImages[0].url : undefined, // Send single string URL
                 user_id: user?.id,
                 item_name: itemName || `Item ${itemCode}`,
                 category: itemCategory || 'Uncategorized'

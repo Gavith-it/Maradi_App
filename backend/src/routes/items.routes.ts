@@ -9,7 +9,9 @@ import {
     getAvailableSerials,
     getAllItemSerials,
     updateItem,
-    deleteItem
+    deleteItem,
+    addMasterImages,
+    updateSerial
 } from '../controllers/items.controller';
 import { authenticateToken } from '../utils/auth';
 
@@ -22,6 +24,8 @@ router.get('/:code/serials', authenticateToken, getAvailableSerials); // For cus
 router.get('/:code/all-serials', authenticateToken, getAllItemSerials); // For admin
 router.get('/:code', authenticateToken, getItemByCode);
 router.post('/stock', authenticateToken, addStock);
+router.post('/:code/master-images', authenticateToken, addMasterImages);
+router.put('/serial/:id', authenticateToken, updateSerial);
 
 // Admin Routes
 router.post('/', authenticateToken, createItem);

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, ActivityIndicator, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,7 +7,7 @@ import { RootStackParamList } from '../types/navigation';
 import axios from 'axios';
 import { useAuthStore, API_URL } from '../store/useAuthStore';
 import { theme } from '../styles/theme';
-import { PackageSearch, ChevronRight } from 'lucide-react-native';
+import { PackageSearch, ChevronRight, X } from 'lucide-react-native';
 
 interface Item {
     item_id: number;
@@ -20,6 +20,11 @@ interface Item {
 export const CatalogScreen = () => {
     const [items, setItems] = useState<Item[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Image Viewer State
+    const [viewerVisible, setViewerVisible] = useState(false);
+    const [viewerImage, setViewerImage] = useState<string | null>(null);
+
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const { token } = useAuthStore();
 
@@ -46,12 +51,21 @@ export const CatalogScreen = () => {
             onPress={() => navigation.navigate('SerialSelection', { itemCode: item.item_code, itemName: item.item_name })}
             activeOpacity={0.9}
         >
-            <View style={styles.imageContainer}>
+            <TouchableOpacity
+                style={styles.imageContainer}
+                activeOpacity={0.8}
+                onPress={() => {
+                    if (item.image_url) {
+                        setViewerImage(item.image_url);
+                        setViewerVisible(true);
+                    }
+                }}
+            >
                 <Image
                     source={{ uri: item.image_url || 'https://via.placeholder.com/150' }}
                     style={styles.image}
                 />
-            </View>
+            </TouchableOpacity>
             <View style={styles.info}>
                 <Text style={styles.name} numberOfLines={2}>{item.item_name}</Text>
                 <Text style={styles.code}>{item.item_code}</Text>
@@ -87,6 +101,18 @@ export const CatalogScreen = () => {
                 contentContainerStyle={styles.list}
                 showsVerticalScrollIndicator={false}
             />
+
+            {/* Full Screen Image Viewer Modal */}
+            <Modal visible={viewerVisible} transparent={true} animationType="fade">
+                <View style={styles.viewerContainer}>
+                    <TouchableOpacity style={styles.viewerCloseBtn} onPress={() => setViewerVisible(false)}>
+                        <X size={28} color="white" />
+                    </TouchableOpacity>
+                    {viewerImage && (
+                        <Image source={{ uri: viewerImage }} style={styles.viewerImage} resizeMode="contain" />
+                    )}
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 };
@@ -167,5 +193,22 @@ const styles = StyleSheet.create({
         backgroundColor: '#e8f5e9',
         borderRadius: 12,
         padding: 4,
+    },
+    viewerContainer: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.9)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    viewerCloseBtn: {
+        position: 'absolute',
+        top: 50,
+        right: 20,
+        zIndex: 10,
+        padding: 8,
+    },
+    viewerImage: {
+        width: '100%',
+        height: '80%',
     }
 });
