@@ -34,7 +34,7 @@ export const CatalogScreen = () => {
 
     const fetchItems = async () => {
         try {
-            const response = await axios.get(`${API_URL}/items`, {
+            const response = await axios.get(`${API_URL}/items/in-stock`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setItems(response.data);
