@@ -32,6 +32,13 @@ CREATE TABLE items (
     b_price DECIMAL(10, 2),
     c_price DECIMAL(10, 2),
     is_active BOOLEAN DEFAULT TRUE,
+    -- Enhanced Metadata columns
+    sap_item_name VARCHAR(255),
+    ecom_display_name VARCHAR(255),
+    fabric_type VARCHAR(255),
+    design_type VARCHAR(255),
+    color_type VARCHAR(255),
+    design_name VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

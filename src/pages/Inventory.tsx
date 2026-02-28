@@ -11,11 +11,11 @@ export const Inventory = () => {
     const [selectedItem, setSelectedItem] = useState<Item | null>(null);
     const [serials, setSerials] = useState<any[]>([]);
     const [isEditing, setIsEditing] = useState(false);
-    const [editForm, setEditForm] = useState({ item_name: '', master_price: '', category: '' });
+    const [editForm, setEditForm] = useState({ item_name: '', category: '' });
 
     // Add Item State
     const [showAddModal, setShowAddModal] = useState(false);
-    const [addForm, setAddForm] = useState({ item_code: '', item_name: '', master_price: '', category: 'General', serial_number: '', quantity: '1' });
+    const [addForm, setAddForm] = useState({ item_code: '', item_name: '', category: 'Sarees', serial_number: '', quantity: '1' });
 
     useEffect(() => {
         fetchItems();
@@ -36,8 +36,7 @@ export const Inventory = () => {
         setSelectedItem(item);
         setEditForm({
             item_name: item.item_name,
-            master_price: item.master_price.toString(),
-            category: item.category || 'General'
+            category: item.category || 'Sarees'
         });
         setIsEditing(false);
         try {
@@ -60,7 +59,7 @@ export const Inventory = () => {
         const config = getCategoryConfig(addForm.category);
 
         // Validation: Serial/Batch Number is conditional
-        if (!addForm.item_code || !addForm.item_name || !addForm.master_price) {
+        if (!addForm.item_code || !addForm.item_name) {
             alert('Please fill in ALL required fields.');
             return;
         }
@@ -73,14 +72,14 @@ export const Inventory = () => {
         try {
             await api.post('/items', {
                 ...addForm,
-                master_price: parseFloat(addForm.master_price),
+                master_price: 0, // Master price is zeroed out since it's handled by price lists now
                 inventory_type: config.type,
                 unit_of_measure: config.unit,
                 quantity: parseInt(addForm.quantity) || 1
             });
             alert('Item created successfully');
             setShowAddModal(false);
-            setAddForm({ item_code: '', item_name: '', master_price: '', category: 'General', serial_number: '', quantity: '1' });
+            setAddForm({ item_code: '', item_name: '', category: 'Sarees', serial_number: '', quantity: '1' });
             fetchItems();
         } catch (error: any) {
             console.error('Create failed', error);
@@ -93,7 +92,6 @@ export const Inventory = () => {
         try {
             await api.put(`/items/${selectedItem.item_id}`, {
                 ...editForm,
-                master_price: parseFloat(editForm.master_price)
             });
             alert('Item updated successfully');
             setIsEditing(false);
@@ -236,7 +234,6 @@ export const Inventory = () => {
                                     <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{item.item_code}</p>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '1rem' }}>
-                                    <span style={{ fontWeight: '700', fontSize: '1.5rem', color: 'var(--primary)' }}>₹{item.master_price}</span>
                                     <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                                         {item.stock_quantity} units
                                     </span>
@@ -252,7 +249,6 @@ export const Inventory = () => {
                             <tr>
                                 <th style={{ padding: '1rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Image</th>
                                 <th style={{ padding: '1rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Item Details</th>
-                                <th style={{ padding: '1rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Price</th>
                                 <th style={{ padding: '1rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Stock</th>
                                 <th style={{ padding: '1rem', color: 'var(--text-secondary)', fontWeight: '600', textAlign: 'right' }}>Actions</th>
                             </tr>
@@ -277,7 +273,6 @@ export const Inventory = () => {
                                         <div style={{ fontWeight: '600', color: 'var(--text-main)', marginBottom: '0.25rem' }}>{item.item_name}</div>
                                         <div style={{ fontFamily: 'monospace', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>{item.item_code}</div>
                                     </td>
-                                    <td style={{ padding: '1rem', fontWeight: '700', color: 'var(--primary)' }}>₹{item.master_price}</td>
                                     <td style={{ padding: '1rem' }}>
                                         <span className={`badge ${item.stock_quantity > 0 ? 'badge-success' : 'badge-danger'}`}>
                                             {item.stock_quantity > 0 ? `${item.stock_quantity} Units` : 'Out of Stock'}
@@ -323,23 +318,18 @@ export const Inventory = () => {
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>Price (₹)</label>
-                                    <input
-                                        className="input"
-                                        value={addForm.master_price}
-                                        onChange={e => setAddForm({ ...addForm, master_price: e.target.value })}
-                                        placeholder="0.00"
-                                        type="number"
-                                    />
-                                </div>
-                                <div>
                                     <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>Category</label>
-                                    <input
+                                    <select
                                         className="input"
                                         value={addForm.category}
                                         onChange={e => setAddForm({ ...addForm, category: e.target.value })}
-                                        placeholder="e.g. Sarees - Zari Silk, Fabrics"
-                                    />
+                                        style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-color)', color: 'var(--text-main)', fontSize: '0.95rem' }}
+                                    >
+                                        <option value="Sarees">Sarees</option>
+                                        <option value="Dhotis">Dhotis</option>
+                                        <option value="Fabrics">Fabrics</option>
+                                        <option value="Accessories">Accessories</option>
+                                    </select>
                                 </div>
                             </div>
 
@@ -452,19 +442,10 @@ export const Inventory = () => {
                                                 onChange={e => setEditForm({ ...editForm, item_name: e.target.value })}
                                             />
                                         </div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                            <div>
-                                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>Price</label>
-                                                <input
-                                                    className="input"
-                                                    value={editForm.master_price}
-                                                    onChange={e => setEditForm({ ...editForm, master_price: e.target.value })}
-                                                    type="number"
-                                                />
-                                            </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
                                             <div>
                                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>Category</label>
-                                                <input
+                                                <select
                                                     className="input"
                                                     value={editForm.category}
                                                     onChange={e => setEditForm({ ...editForm, category: e.target.value })}
