@@ -500,3 +500,28 @@ export const markSerialSold = async (req: Request, res: Response) => {
         res.status(500).json({ message: 'Server error marking serial sold' });
     }
 };
+
+// PUT /api/items/serial-number/:serialNumber/sold
+// Marks an individual serial as sold using its string barcode
+export const markSerialSoldByNumber = async (req: Request, res: Response) => {
+    const { serialNumber } = req.params;
+
+    try {
+        const result = await pool.query(
+            `UPDATE serials 
+             SET status = 'sold', sold_date = CURRENT_TIMESTAMP 
+             WHERE serial_number = $1 AND status != 'sold'
+             RETURNING *`,
+            [serialNumber]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Serial not found or already sold' });
+        }
+
+        res.status(200).json({ message: 'Stock marked as sold successfully', serial: result.rows[0] });
+    } catch (error: any) {
+        console.error('Error marking serial sold by number:', error);
+        res.status(500).json({ message: 'Server error marking serial sold' });
+    }
+};

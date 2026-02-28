@@ -12,7 +12,8 @@ import {
     deleteItem,
     addMasterImages,
     updateSerial,
-    markSerialSold
+    markSerialSold,
+    markSerialSoldByNumber
 } from '../controllers/items.controller';
 import { authenticateToken } from '../utils/auth';
 
@@ -28,6 +29,7 @@ router.post('/stock', authenticateToken, addStock);
 router.post('/:code/master-images', authenticateToken, addMasterImages);
 router.put('/serial/:id', authenticateToken, updateSerial);
 router.put('/serial/:id/sold', authenticateToken, markSerialSold);
+router.put('/serial-number/:serialNumber/sold', authenticateToken, markSerialSoldByNumber);
 
 // Admin Routes
 router.post('/', authenticateToken, createItem);

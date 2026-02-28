@@ -2,7 +2,7 @@ export type RootStackParamList = {
     Login: undefined;
     Home: undefined;
     ScanQR: {
-        mode: 'add_stock' | 'mark_sale' | 'audit';
+        mode: 'add_stock' | 'mark_sold' | 'audit';
         currentItemCode?: string;
         currentSerialNumber?: string;
     };

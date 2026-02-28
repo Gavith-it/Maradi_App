@@ -8,6 +8,8 @@ import { RootStackParamList } from '../types/navigation';
 import { theme } from '../styles/theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScanLine, RotateCcw, CheckCircle2 } from 'lucide-react-native';
+import axios from 'axios';
+import { useAuthStore, API_URL } from '../store/useAuthStore';
 
 export const QRScannerScreen = () => {
     const [permission, requestPermission] = useCameraPermissions();
@@ -15,6 +17,7 @@ export const QRScannerScreen = () => {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const route = useRoute<any>();
     const mode = route.params?.mode || 'add_stock';
+    const { token } = useAuthStore();
 
     // Accumulate scanned codes
     const [scannedCodes, setScannedCodes] = useState({
@@ -81,10 +84,23 @@ export const QRScannerScreen = () => {
                     });
                 }
             }
-        } else {
-            setScanned(true);
-            Alert.alert(`Scanned ${data} for mode ${mode}`);
-            setTimeout(() => setScanned(false), 2000);
+        } else if (mode === 'mark_sold') {
+            setScanned(true); // Pause scanner while processing
+
+            axios.put(`${API_URL}/items/serial-number/${data}/sold`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+                .then(() => {
+                    Alert.alert("Success", `Item ${data} marked as sold`);
+                })
+                .catch(err => {
+                    console.error('Mark sold error:', err.response?.data || err.message);
+                    Alert.alert("Error", err.response?.data?.message || "Failed to mark item as sold");
+                })
+                .finally(() => {
+                    // Auto-resume scanner after a brief readable delay
+                    setTimeout(() => setScanned(false), 2000);
+                });
         }
     };
 

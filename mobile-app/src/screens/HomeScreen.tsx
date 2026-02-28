@@ -67,14 +67,14 @@ export const HomeScreen = () => {
                                 subtitle="New inventory"
                                 icon={<PackagePlus color="white" size={24} />}
                                 colors={theme.colors.primaryGradient}
-                                onPress={() => navigation.navigate('AddStock', {})}
+                                onPress={() => navigation.navigate('ScanQR', { mode: 'add_stock' })}
                             />
                             <ActionCard
-                                title="Scan QR"
-                                subtitle="Quick lookup"
+                                title="Mark as Sold"
+                                subtitle="Quick scan to retire"
                                 icon={<QrCode color="white" size={24} />}
                                 colors={theme.colors.blueGradient}
-                                onPress={() => navigation.navigate('ScanQR', { mode: 'add_stock' })}
+                                onPress={() => navigation.navigate('ScanQR', { mode: 'mark_sold' })}
                             />
                             <ActionCard
                                 title="In-Stock Catalog"
