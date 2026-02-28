@@ -82,7 +82,7 @@ export const InternalCatalogScreen = () => {
     }
 
     return (
-        <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
+        <SafeAreaView style={styles.safeArea}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <ArrowLeft color={theme.colors.text} size={24} />
