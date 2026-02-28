@@ -147,7 +147,7 @@ export const SerialSelectionScreen = () => {
     }
 
     return (
-        <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
+        <SafeAreaView style={styles.safeArea}>
             <View style={styles.headerContainer}>
                 <Text style={styles.header}>{itemName}</Text>
                 <Text style={styles.subtext}>Select a specific piece to purchase</Text>

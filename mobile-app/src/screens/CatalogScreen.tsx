@@ -88,7 +88,7 @@ export const CatalogScreen = () => {
     }
 
     return (
-        <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
+        <SafeAreaView style={styles.safeArea}>
             <View style={styles.header}>
                 <PackageSearch color={theme.colors.primaryDark} size={24} style={{ marginRight: 8 }} />
                 <Text style={styles.headerText}>Product Catalog</Text>
