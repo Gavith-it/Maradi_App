@@ -26,29 +26,7 @@ export const CartScreen = () => {
         fetchCart();
     }, []);
 
-    // Timer Logic
-    useEffect(() => {
-        const interval = setInterval(() => {
-            const newTimers: { [key: number]: string } = {};
-
-            cartItems.forEach(item => {
-                const expiry = new Date(item.expires_at).getTime();
-                const now = new Date().getTime();
-                const diff = expiry - now;
-
-                if (diff <= 0) {
-                    newTimers[item.cart_id] = 'Expired';
-                } else {
-                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-                    newTimers[item.cart_id] = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-                }
-            });
-            setTimers(newTimers);
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, [cartItems]);
+    // Timers removed per user request
 
     const fetchCart = async () => {
         try {
@@ -75,9 +53,8 @@ export const CartScreen = () => {
     };
 
     const renderItem = ({ item }: { item: CartItem }) => {
-        const isExpired = timers[item.cart_id] === 'Expired';
         return (
-            <View style={[styles.card, isExpired && { opacity: 0.6 }]}>
+            <View style={styles.card}>
                 <Image
                     source={{ uri: item.image_url || 'https://via.placeholder.com/150' }}
                     style={styles.image}
@@ -87,13 +64,7 @@ export const CartScreen = () => {
                     <Text style={styles.serial}>SN: {item.serial_number}</Text>
                     <Text style={styles.price}>₹{item.master_price}</Text>
                 </View>
-                <View style={styles.actionsContainer}>
-                    <View style={[styles.timerWrapper, isExpired ? styles.timerExpiredWrapper : {}]}>
-                        <Clock size={12} color={isExpired ? theme.colors.error : theme.colors.primaryDark} style={{ marginRight: 4 }} />
-                        <Text style={[styles.timer, isExpired && styles.expired]}>
-                            {timers[item.cart_id] || '...'}
-                        </Text>
-                    </View>
+                <View style={[styles.actionsContainer, { justifyContent: 'center' }]}>
                     <TouchableOpacity style={styles.removeBtn} onPress={() => removeItem(item.cart_id)}>
                         <Trash2 color={theme.colors.error} size={20} />
                     </TouchableOpacity>

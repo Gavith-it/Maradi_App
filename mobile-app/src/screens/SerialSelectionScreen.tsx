@@ -62,10 +62,8 @@ export const SerialSelectionScreen = () => {
             await axios.post(`${API_URL}/cart/add`, { serial_id: serialId }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            Alert.alert('Success', 'Item added to cart', [
-                { text: 'Go to Cart', onPress: () => navigation.navigate('Cart') },
-                { text: 'Continue Shopping', style: 'cancel', onPress: fetchSerials } // Refresh to update status
-            ]);
+            // Silently refresh serials so the added item disappears from available stock
+            fetchSerials();
         } catch (error: any) {
             Alert.alert('Error', error.response?.data?.message || 'Failed to add to cart');
         }
