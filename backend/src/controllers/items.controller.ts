@@ -149,17 +149,40 @@ export const addStock = async (req: Request, res: Response) => {
 
         // 2. Handle Serial / Batch / Bulk insertion
         let insertedSerialCode = serial_number;
+        let customMessage = 'Stock added successfully';
 
         if (invType === 'serial') {
             if (!serial_number) throw new Error('Serial number is required for this category');
-            const serialCheck = await client.query('SELECT serial_id FROM serials WHERE serial_number = $1', [serial_number]);
-            if (serialCheck.rows.length > 0) throw new Error('Serial number already exists');
+            const serialCheck = await client.query('SELECT serial_id, status FROM serials WHERE serial_number = $1', [serial_number]);
 
-            await client.query(
-                `INSERT INTO serials (item_id, serial_number, image_url, quantity, added_by, status)
-                 VALUES ($1, $2, $3, 1, $4, 'available')`,
-                [itemId, serial_number, serialImageUrl, user_id]
-            );
+            if (serialCheck.rows.length > 0) {
+                const existingSerial = serialCheck.rows[0];
+                if (existingSerial.status === 'sold') {
+                    // Handle Sales Return
+                    await client.query(
+                        `UPDATE serials 
+                         SET status = 'available', 
+                             sold_to = NULL, 
+                             sold_date = NULL, 
+                             sold_type = NULL, 
+                             image_url = COALESCE($1, image_url),
+                             item_id = $2,
+                             date_added = CURRENT_TIMESTAMP,
+                             added_by = $3
+                         WHERE serial_number = $4`,
+                        [serialImageUrl, itemId, user_id, serial_number]
+                    );
+                    customMessage = 'Sales Return processed successfully';
+                } else {
+                    throw new Error(`Serial number already exists and is currently ${existingSerial.status}`);
+                }
+            } else {
+                await client.query(
+                    `INSERT INTO serials (item_id, serial_number, image_url, quantity, added_by, status)
+                     VALUES ($1, $2, $3, 1, $4, 'available')`,
+                    [itemId, serial_number, serialImageUrl, user_id]
+                );
+            }
         } else if (invType === 'batch') {
             if (!serial_number) throw new Error('Batch number is required for this category');
             // For batch, the serial_number field holds the batch code. Multiple identical batches are summed up later or kept as separate entries.
@@ -179,7 +202,7 @@ export const addStock = async (req: Request, res: Response) => {
         }
 
         await client.query('COMMIT');
-        res.status(201).json({ message: 'Stock added successfully', serial_number: insertedSerialCode });
+        res.status(201).json({ message: customMessage, serial_number: insertedSerialCode });
     } catch (error: any) {
         await client.query('ROLLBACK');
         console.error('Error adding stock:', error);

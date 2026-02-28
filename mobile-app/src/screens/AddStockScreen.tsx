@@ -176,7 +176,7 @@ export const AddStockScreen = () => {
             }
 
             // STEP 3: Add stock record to the database pointing to the new S3 URL
-            await axios.post(`${API_URL}/items/stock`, {
+            const addStockResponse = await axios.post(`${API_URL}/items/stock`, {
                 item_code: itemCode,
                 serial_number: serialNumber,
                 quantity,
@@ -188,7 +188,7 @@ export const AddStockScreen = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            Alert.alert('Success', 'Stock added successfully', [
+            Alert.alert('Success', addStockResponse.data.message || 'Stock processed successfully', [
                 {
                     text: 'OK',
                     onPress: () => {
