@@ -109,13 +109,15 @@ export const getItemByCode = async (req: Request, res: Response) => {
 };
 
 export const addStock = async (req: Request, res: Response) => {
-    // Expected payload: { item_code, serial_number (optional), image_url: string, quantity (optional), user_id, item_name, category }
+    const { item_code, serial_number, quantity, user_id, item_name, category, image_url: p_image_url } = req.body;
+    let serialImageUrl = p_image_url;
 
-    const { item_code, serial_number, image_url, quantity, user_id, item_name, category } = req.body;
+    console.log(`\n\n[AddStock DEBUG] INCOMING PAYLOAD => item_code: "${item_code}", serial_number: "${serial_number}"`);
+
     const stockQuantity = quantity ? parseInt(quantity, 10) : 1;
 
     // Fallback if no image provided
-    const serialImageUrl = image_url || 'https://via.placeholder.com/300';
+    serialImageUrl = serialImageUrl || 'https://via.placeholder.com/300';
 
     const client = await pool.connect();
     try {
@@ -125,6 +127,7 @@ export const addStock = async (req: Request, res: Response) => {
         let itemId;
         let invType = 'serial';
         const itemResult = await client.query('SELECT item_id, inventory_type FROM items WHERE item_code = $1', [item_code]);
+        console.log(`[AddStock DEBUG] Item search for ${item_code} returned ${itemResult.rows.length} rows`);
 
         if (itemResult.rows.length === 0) {
             console.log(`Item master not found for ${item_code}. Auto-creating...`);
@@ -144,7 +147,8 @@ export const addStock = async (req: Request, res: Response) => {
             itemId = newItemResult.rows[0].item_id;
         } else {
             itemId = itemResult.rows[0].item_id;
-            invType = itemResult.rows[0].inventory_type;
+            // Fallback to 'serial' if the database has NULL for inventory_type, especially if a serial_number was actively scanned
+            invType = itemResult.rows[0].inventory_type || (serial_number ? 'serial' : 'none');
         }
 
         // 2. Handle Serial / Batch / Bulk insertion
@@ -154,9 +158,11 @@ export const addStock = async (req: Request, res: Response) => {
         if (invType === 'serial') {
             if (!serial_number) throw new Error('Serial number is required for this category');
             const serialCheck = await client.query('SELECT serial_id, status FROM serials WHERE serial_number = $1', [serial_number]);
+            console.log(`[AddStock DEBUG] Serial check for "${serial_number}" returned ${serialCheck.rows.length} rows`);
 
             if (serialCheck.rows.length > 0) {
                 const existingSerial = serialCheck.rows[0];
+                console.log(`AddStock DEBUG: existingSerial found:`, existingSerial);
                 if (existingSerial.status === 'sold') {
                     // Handle Sales Return
                     await client.query(
@@ -174,6 +180,7 @@ export const addStock = async (req: Request, res: Response) => {
                     );
                     customMessage = 'Sales Return processed successfully';
                 } else {
+                    console.error(`AddStock DEBUG: Throwing error because status is ${existingSerial.status}`);
                     throw new Error(`Serial number already exists and is currently ${existingSerial.status}`);
                 }
             } else {
@@ -206,6 +213,9 @@ export const addStock = async (req: Request, res: Response) => {
     } catch (error: any) {
         await client.query('ROLLBACK');
         console.error('Error adding stock:', error);
+        if (error.code === '23505') {
+            return res.status(400).json({ message: `Database Duplication Error: ${error.detail || error.message}` });
+        }
         res.status(400).json({ message: error.message || 'Server error' });
     } finally {
         client.release();
@@ -504,9 +514,20 @@ export const markSerialSold = async (req: Request, res: Response) => {
 // PUT /api/items/serial-number/:serialNumber/sold
 // Marks an individual serial as sold using its string barcode
 export const markSerialSoldByNumber = async (req: Request, res: Response) => {
-    const { serialNumber } = req.params;
+    // Force uppercase decoded URL parameter in case Axios or Express messed with it
+    const paramSerialNumber = Array.isArray(req.params.serialNumber) ? req.params.serialNumber[0] : req.params.serialNumber;
+    const serialNumber = decodeURIComponent(paramSerialNumber).trim().toUpperCase();
 
     try {
+        console.log(`[markSerialSoldByNumber] Incoming request for: "${serialNumber}"`);
+
+        // Diagnostic Check: What is the ACTUAL state of this string in the DB?
+        const diagnosticCheck = await pool.query('SELECT serial_number, status FROM serials WHERE serial_number = $1', [serialNumber]);
+        console.log(`[markSerialSoldByNumber] Diagnostic check found ${diagnosticCheck.rows.length} rows for "${serialNumber}"`);
+        if (diagnosticCheck.rows.length > 0) {
+            console.log(`[markSerialSoldByNumber] DB state for "${serialNumber}":`, diagnosticCheck.rows[0]);
+        }
+
         const result = await pool.query(
             `UPDATE serials 
              SET status = 'sold', sold_date = CURRENT_TIMESTAMP 
@@ -516,9 +537,16 @@ export const markSerialSoldByNumber = async (req: Request, res: Response) => {
         );
 
         if (result.rows.length === 0) {
-            return res.status(404).json({ message: 'Serial not found or already sold' });
+            if (diagnosticCheck.rows.length === 0) {
+                console.log(`[markSerialSoldByNumber] FAILURE: "${serialNumber}" does not exist in the serials table. Did user scan an item_code?`);
+                return res.status(404).json({ message: `Serial number '${serialNumber}' not found in database.` });
+            } else {
+                console.log(`[markSerialSoldByNumber] FAILURE: "${serialNumber}" was found in DB, but status is already '${diagnosticCheck.rows[0].status}'.`);
+                return res.status(404).json({ message: `Serial '${serialNumber}' is already marked as ${diagnosticCheck.rows[0].status}` });
+            }
         }
 
+        console.log(`[markSerialSoldByNumber] SUCCESS. Updated "${serialNumber}" to sold.`);
         res.status(200).json({ message: 'Stock marked as sold successfully', serial: result.rows[0] });
     } catch (error: any) {
         console.error('Error marking serial sold by number:', error);

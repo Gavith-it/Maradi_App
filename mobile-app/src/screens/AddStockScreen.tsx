@@ -177,13 +177,13 @@ export const AddStockScreen = () => {
 
             // STEP 3: Add stock record to the database pointing to the new S3 URL
             const addStockResponse = await axios.post(`${API_URL}/items/stock`, {
-                item_code: itemCode,
-                serial_number: serialNumber,
+                item_code: itemCode.trim().toUpperCase(),
+                serial_number: serialNumber.trim().toUpperCase(),
                 quantity,
                 image_url: uploadedImages.length > 0 ? uploadedImages[0].url : undefined, // Send single string URL
                 user_id: user?.id,
-                item_name: itemName || `Item ${itemCode}`,
-                category: itemCategory || 'Uncategorized'
+                item_name: itemName.trim() || `Item ${itemCode.trim().toUpperCase()}`,
+                category: itemCategory.trim() || 'Uncategorized'
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });

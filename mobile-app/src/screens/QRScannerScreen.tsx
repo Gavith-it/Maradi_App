@@ -53,19 +53,21 @@ export const QRScannerScreen = () => {
     const handleBarCodeScanned = ({ type, data }: { type: string; data: string }) => {
         if (scanned) return;
 
+        const cleanData = data.trim().toUpperCase();
+
         if (mode === 'add_stock') {
             let updated = { ...scannedCodes };
             let changed = false;
 
             // Smart detection based on format
-            if (data.startsWith('FG-')) {
-                if (updated.itemCode !== data) {
-                    updated.itemCode = data;
+            if (cleanData.startsWith('FG-')) {
+                if (updated.itemCode !== cleanData) {
+                    updated.itemCode = cleanData;
                     changed = true;
                 }
             } else {
-                if (updated.serialNumber !== data) {
-                    updated.serialNumber = data;
+                if (updated.serialNumber !== cleanData) {
+                    updated.serialNumber = cleanData;
                     changed = true;
                 }
             }
@@ -87,11 +89,11 @@ export const QRScannerScreen = () => {
         } else if (mode === 'mark_sold') {
             setScanned(true); // Pause scanner while processing
 
-            axios.put(`${API_URL}/items/serial-number/${data}/sold`, {}, {
+            axios.put(`${API_URL}/items/serial-number/${cleanData}/sold`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             })
                 .then(() => {
-                    Alert.alert("Success", `Item ${data} marked as sold`);
+                    Alert.alert("Success", `Item ${cleanData} marked as sold`);
                 })
                 .catch(err => {
                     console.error('Mark sold error:', err.response?.data || err.message);
