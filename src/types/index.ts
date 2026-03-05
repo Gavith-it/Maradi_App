@@ -23,6 +23,12 @@ export interface Item {
     master_price: number;
     stock_quantity: number;
     image_url?: string;
+    sap_item_name?: string;
+    ecom_display_name?: string;
+    fabric_type?: string;
+    design_type?: string;
+    color_type?: string;
+    design_name?: string;
 }
 
 export interface Order {

@@ -16,7 +16,20 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// Configured CORS to be more secure. 
+// In production, origins should be an array of expected domains.
+app.use(cors({
+    origin: process.env.NODE_ENV === 'production'
+        ? process.env.FRONTEND_URL || '*'
+        : '*',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+if (process.env.JWT_SECRET === 'your_jwt_secret_key_change_this_for_production') {
+    console.warn('\x1b[31m%s\x1b[0m', 'WARNING: INSECURE JWT_SECRET DETECTED! Change process.env.JWT_SECRET immediately before production deployment.');
+}
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 

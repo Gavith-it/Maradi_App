@@ -6,12 +6,14 @@ import { Orders } from './pages/Orders';
 import { Inventory } from './pages/Inventory';
 import { Customers } from './pages/Customers';
 import { PriceLists } from './pages/PriceLists';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
         <Route path="/" element={<DashboardLayout />}>
           <Route index element={<DashboardOverview />} />

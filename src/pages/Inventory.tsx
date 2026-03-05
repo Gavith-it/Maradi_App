@@ -11,11 +11,17 @@ export const Inventory = () => {
     const [selectedItem, setSelectedItem] = useState<Item | null>(null);
     const [serials, setSerials] = useState<any[]>([]);
     const [isEditing, setIsEditing] = useState(false);
-    const [editForm, setEditForm] = useState({ item_name: '', category: '' });
+    const [editForm, setEditForm] = useState({
+        item_name: '', category: '', sap_item_name: '', ecom_display_name: '',
+        fabric_type: '', design_type: '', color_type: '', design_name: ''
+    });
 
     // Add Item State
     const [showAddModal, setShowAddModal] = useState(false);
-    const [addForm, setAddForm] = useState({ item_code: '', item_name: '', category: 'Sarees', serial_number: '', quantity: '1' });
+    const [addForm, setAddForm] = useState({
+        item_code: '', item_name: '', category: 'Sarees', serial_number: '', quantity: '1',
+        sap_item_name: '', ecom_display_name: '', fabric_type: '', design_type: '', color_type: '', design_name: ''
+    });
 
     useEffect(() => {
         fetchItems();
@@ -36,7 +42,13 @@ export const Inventory = () => {
         setSelectedItem(item);
         setEditForm({
             item_name: item.item_name,
-            category: item.category || 'Sarees'
+            category: item.category || 'Sarees',
+            sap_item_name: item.sap_item_name || '',
+            ecom_display_name: item.ecom_display_name || '',
+            fabric_type: item.fabric_type || '',
+            design_type: item.design_type || '',
+            color_type: item.color_type || '',
+            design_name: item.design_name || ''
         });
         setIsEditing(false);
         try {
@@ -79,7 +91,10 @@ export const Inventory = () => {
             });
             alert('Item created successfully');
             setShowAddModal(false);
-            setAddForm({ item_code: '', item_name: '', category: 'Sarees', serial_number: '', quantity: '1' });
+            setAddForm({
+                item_code: '', item_name: '', category: 'Sarees', serial_number: '', quantity: '1',
+                sap_item_name: '', ecom_display_name: '', fabric_type: '', design_type: '', color_type: '', design_name: ''
+            });
             fetchItems();
         } catch (error: any) {
             console.error('Create failed', error);
@@ -333,6 +348,39 @@ export const Inventory = () => {
                                 </div>
                             </div>
 
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>SAP Item Name (Optional)</label>
+                                    <input className="input" value={addForm.sap_item_name} onChange={e => setAddForm({ ...addForm, sap_item_name: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>E-Commerce Display Name (Optional)</label>
+                                    <input className="input" value={addForm.ecom_display_name} onChange={e => setAddForm({ ...addForm, ecom_display_name: e.target.value })} />
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>Fabric Type (Optional)</label>
+                                    <input className="input" value={addForm.fabric_type} onChange={e => setAddForm({ ...addForm, fabric_type: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>Design Type (Optional)</label>
+                                    <input className="input" value={addForm.design_type} onChange={e => setAddForm({ ...addForm, design_type: e.target.value })} />
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>Color Type (Optional)</label>
+                                    <input className="input" value={addForm.color_type} onChange={e => setAddForm({ ...addForm, color_type: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>Design Name (Optional)</label>
+                                    <input className="input" value={addForm.design_name} onChange={e => setAddForm({ ...addForm, design_name: e.target.value })} />
+                                </div>
+                            </div>
+
                             {/* Dynamic Fields based on Category */}
                             {getCategoryConfig(addForm.category).requireSerial ? (
                                 <div>
@@ -452,6 +500,39 @@ export const Inventory = () => {
                                                 />
                                             </div>
                                         </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>SAP Item Name (Optional)</label>
+                                                <input className="input" value={editForm.sap_item_name} onChange={e => setEditForm({ ...editForm, sap_item_name: e.target.value })} />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>E-Commerce Display Name (Optional)</label>
+                                                <input className="input" value={editForm.ecom_display_name} onChange={e => setEditForm({ ...editForm, ecom_display_name: e.target.value })} />
+                                            </div>
+                                        </div>
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>Fabric Type (Optional)</label>
+                                                <input className="input" value={editForm.fabric_type} onChange={e => setEditForm({ ...editForm, fabric_type: e.target.value })} />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>Design Type (Optional)</label>
+                                                <input className="input" value={editForm.design_type} onChange={e => setEditForm({ ...editForm, design_type: e.target.value })} />
+                                            </div>
+                                        </div>
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>Color Type (Optional)</label>
+                                                <input className="input" value={editForm.color_type} onChange={e => setEditForm({ ...editForm, color_type: e.target.value })} />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>Design Name (Optional)</label>
+                                                <input className="input" value={editForm.design_name} onChange={e => setEditForm({ ...editForm, design_name: e.target.value })} />
+                                            </div>
+                                        </div>
+
                                         <div style={{ marginTop: '1rem' }}>
                                             <button onClick={handleUpdate} className="btn btn-primary">Save Changes</button>
                                         </div>
@@ -522,7 +603,8 @@ export const Inventory = () => {
                         </div>
                     </div>
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 };

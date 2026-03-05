@@ -109,7 +109,7 @@ export const getItemByCode = async (req: Request, res: Response) => {
 };
 
 export const addStock = async (req: Request, res: Response) => {
-    const { item_code, serial_number, quantity, user_id, item_name, category, image_url: p_image_url } = req.body;
+    const { item_code, serial_number, quantity, user_id, item_name, category, image_url: p_image_url, sap_item_name, ecom_display_name, fabric_type, design_type, color_type, design_name } = req.body;
     let serialImageUrl = p_image_url;
 
     console.log(`\n\n[AddStock DEBUG] INCOMING PAYLOAD => item_code: "${item_code}", serial_number: "${serial_number}"`);
@@ -140,9 +140,9 @@ export const addStock = async (req: Request, res: Response) => {
             else if (['Sarees - Other Silk', 'Dothis', 'Accessories'].includes(catToUse)) invType = 'none';
 
             const newItemResult = await client.query(
-                `INSERT INTO items (item_code, item_name, category, inventory_type, master_price)
-                 VALUES ($1, $2, $3, $4, 0) RETURNING item_id`,
-                [item_code, nameToUse, catToUse, invType]
+                `INSERT INTO items (item_code, item_name, category, inventory_type, master_price, sap_item_name, ecom_display_name, fabric_type, design_type, color_type, design_name)
+                 VALUES ($1, $2, $3, $4, 0, $5, $6, $7, $8, $9, $10) RETURNING item_id`,
+                [item_code, nameToUse, catToUse, invType, sap_item_name, ecom_display_name, fabric_type, design_type, color_type, design_name]
             );
             itemId = newItemResult.rows[0].item_id;
         } else {
@@ -225,13 +225,13 @@ export const addStock = async (req: Request, res: Response) => {
 // Update Item Master
 export const updateItem = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { item_name, master_price, category } = req.body;
+    const { item_name, category, sap_item_name, ecom_display_name, fabric_type, design_type, color_type, design_name } = req.body;
 
     try {
         const result = await query(
-            `UPDATE items SET item_name = $1, master_price = $2, category = $3 
-             WHERE item_id = $4 RETURNING *`,
-            [item_name, master_price, category, id]
+            `UPDATE items SET item_name = $1, category = $2, sap_item_name = $3, ecom_display_name = $4, fabric_type = $5, design_type = $6, color_type = $7, design_name = $8
+             WHERE item_id = $9 RETURNING *`,
+            [item_name, category, sap_item_name, ecom_display_name, fabric_type, design_type, color_type, design_name, id]
         );
 
         if (result.rows.length === 0) {
