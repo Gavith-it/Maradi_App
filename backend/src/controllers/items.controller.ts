@@ -130,21 +130,8 @@ export const addStock = async (req: Request, res: Response) => {
         console.log(`[AddStock DEBUG] Item search for ${item_code} returned ${itemResult.rows.length} rows`);
 
         if (itemResult.rows.length === 0) {
-            console.log(`Item master not found for ${item_code}. Auto-creating...`);
-            const nameToUse = item_name || `Item ${item_code}`;
-            const catToUse = category || 'Uncategorized';
-
-            // Infer inventory type from category if auto-creating
-            if (catToUse === 'Sarees - Zari Silk') invType = 'serial';
-            else if (catToUse === 'Fabrics') invType = 'batch';
-            else if (['Sarees - Other Silk', 'Dothis', 'Accessories'].includes(catToUse)) invType = 'none';
-
-            const newItemResult = await client.query(
-                `INSERT INTO items (item_code, item_name, category, inventory_type, master_price, sap_item_name, ecom_display_name, fabric_type, design_type, color_type, design_name)
-                 VALUES ($1, $2, $3, $4, 0, $5, $6, $7, $8, $9, $10) RETURNING item_id`,
-                [item_code, nameToUse, catToUse, invType, sap_item_name, ecom_display_name, fabric_type, design_type, color_type, design_name]
-            );
-            itemId = newItemResult.rows[0].item_id;
+            await client.query('ROLLBACK');
+            return res.status(404).json({ message: `Item Code "${item_code}" does not exist in the master inventory. Please have an admin add it first.` });
         } else {
             itemId = itemResult.rows[0].item_id;
             // Fallback to 'serial' if the database has NULL for inventory_type, especially if a serial_number was actively scanned

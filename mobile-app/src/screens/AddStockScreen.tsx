@@ -84,17 +84,25 @@ export const AddStockScreen = () => {
             const response = await axios.get(`${API_URL}/items/${code}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            if (response.data) {
-                setItemName(response.data.item_name || '');
+            if (response.data && response.data.item_name) {
+                setItemName(response.data.item_name);
                 setItemCategory(response.data.category || 'General');
             } else {
-                setItemName('');
-                setItemCategory('');
+                throw new Error("Item not found");
             }
-        } catch (error) {
+        } catch (error: any) {
             setItemName('');
             setItemCategory('');
-            // Optional: console.log('Item not found, assuming new item');
+            setItemCode(''); // Clear the invalid input
+
+            if (error.response?.status === 404 || error.message === "Item not found") {
+                Alert.alert(
+                    'Item Not Found',
+                    `Item Code "${code}" does not exist in the master inventory.\n\nPlease ask an admin to add this item in the web dashboard before adding stock.`
+                );
+            } else {
+                Alert.alert('Error', 'Failed to fetch item details from server.');
+            }
         } finally {
             setFetchingName(false);
         }
@@ -135,6 +143,11 @@ export const AddStockScreen = () => {
     const handleSubmit = async () => {
         if (!itemCode) {
             Alert.alert('Error', 'Item Code is required');
+            return;
+        }
+
+        if (!itemName) {
+            Alert.alert('Error', 'Valid Master Item is required to add stock. Please ensure the Item Code exists in the inventory.');
             return;
         }
 
