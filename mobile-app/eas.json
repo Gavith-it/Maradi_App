@@ -14,7 +14,11 @@
                 "buildType": "apk"
             }
         },
-        "production": {}
+        "production": {
+            "env": {
+                "EXPO_PUBLIC_API_URL": "https://maradi-app-theta.vercel.app/api"
+            }
+        }
     },
     "submit": {
         "production": {}
