@@ -53,8 +53,7 @@ export const HomeScreen = () => {
                     />
                     <View style={styles.greetingContainer}>
                         <Text style={styles.greeting}>Good Morning,</Text>
-                        <Text style={styles.username}>{user?.role === 'customer' ? 'Customer' : 'Admin'}</Text>
-                        <Text style={styles.email}>{user?.email}</Text>
+                        <Text style={styles.username}>{user?.name || (user?.role === 'customer' ? 'Customer' : 'Admin')}</Text>
                     </View>
                 </View>
 

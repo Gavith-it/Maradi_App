@@ -22,14 +22,14 @@ export const register = async (req: Request, res: Response) => {
 
         const result = await query(
             `INSERT INTO users (email, password_hash, role, company_name, phone, price_list_id) 
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING user_id, email, role, price_list_id`,
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING user_id, email, role, company_name, price_list_id`,
             [email, hashedPassword, role, company_name, phone, price_list_id || null]
         );
 
         const user = result.rows[0];
         const token = generateToken({ id: user.user_id, role: user.role });
 
-        res.status(201).json({ user, token });
+        res.status(201).json({ user: { id: user.user_id, email: user.email, role: user.role, name: user.company_name }, token });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
@@ -58,7 +58,7 @@ export const login = async (req: Request, res: Response) => {
         }
 
         const token = generateToken({ id: user.user_id, role: user.role });
-        res.json({ user: { id: user.user_id, email: user.email, role: user.role }, token });
+        res.json({ user: { id: user.user_id, email: user.email, role: user.role, name: user.company_name }, token });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });

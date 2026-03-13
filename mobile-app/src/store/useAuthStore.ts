@@ -19,6 +19,7 @@ interface User {
     id: number;
     email: string;
     role: 'customer' | 'internal_user' | 'owner';
+    name?: string;
 }
 
 interface AuthState {
