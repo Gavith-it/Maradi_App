@@ -25,7 +25,13 @@
       "versionCode": 4
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "name": "Maradi App",
+      "shortName": "Maradi",
+      "themeColor": "#ffffff",
+      "backgroundColor": "#ffffff",
+      "display": "standalone"
     },
     "extra": {
       "eas": {

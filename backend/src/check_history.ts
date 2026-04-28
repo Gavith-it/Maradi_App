@@ -1,4 +1,4 @@
-import { pool } from './src/db/index';
+import { pool } from './db/index';
 
 async function checkSerialHistory() {
     const client = await pool.connect();
