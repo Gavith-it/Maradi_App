@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Image, TouchableOpacity, Modal, Alert, ScrollView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, Image, TouchableOpacity, Modal, Alert, ScrollView, TextInput, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../types/navigation';
@@ -218,29 +218,46 @@ export const InternalItemDetailScreen = () => {
     };
 
     const handleMarkAsSold = (serialId: number, serialNumber: string) => {
-        Alert.alert(
-            "Mark as Sold",
-            `Are you sure you want to mark serial ${serialNumber} as sold? It will be removed from available stock.`,
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Mark Sold",
-                    style: "destructive",
-                    onPress: async () => {
-                        try {
-                            await axios.put(`${API_URL}/items/serial/${serialId}/sold`, {}, {
-                                headers: { Authorization: `Bearer ${token}` }
-                            });
-                            Alert.alert("Success", "Item marked as sold.");
-                            fetchAvailableSerials(); // Refresh the list
-                        } catch (error: any) {
-                            console.error('Mark Sold Error:', error.message);
-                            Alert.alert("Error", "Failed to mark item as sold.");
-                        }
+        if (Platform.OS === 'web') {
+            const confirmed = window.confirm(`Are you sure you want to mark serial ${serialNumber} as sold? It will be removed from available stock.`);
+            if (confirmed) {
+                executeMarkSold(serialId);
+            }
+        } else {
+            Alert.alert(
+                "Mark as Sold",
+                `Are you sure you want to mark serial ${serialNumber} as sold? It will be removed from available stock.`,
+                [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                        text: "Mark Sold",
+                        style: "destructive",
+                        onPress: () => executeMarkSold(serialId)
                     }
-                }
-            ]
-        );
+                ]
+            );
+        }
+    };
+
+    const executeMarkSold = async (serialId: number) => {
+        try {
+            await axios.put(`${API_URL}/items/serial/${serialId}/sold`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (Platform.OS === 'web') {
+                window.alert("Success: Item marked as sold.");
+            } else {
+                Alert.alert("Success", "Item marked as sold.");
+            }
+            fetchAvailableSerials(); // Refresh the list
+        } catch (error: any) {
+            console.error('Mark Sold Error:', error.message);
+            if (Platform.OS === 'web') {
+                window.alert("Error: Failed to mark item as sold.");
+            } else {
+                Alert.alert("Error", "Failed to mark item as sold.");
+            }
+        }
     };
 
     const renderSerialItem = ({ item }: { item: Serial }) => (
