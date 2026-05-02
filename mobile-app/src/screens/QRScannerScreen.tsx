@@ -28,48 +28,52 @@ export const QRScannerScreen = () => {
         serialNumber: route.params?.currentSerialNumber || ''
     });
 
-    // --- Web-specific camera setup using html5-qrcode ---
+    // --- Web-specific camera setup using @zxing/browser ---
     useEffect(() => {
         if (!isWeb || scanned) return;
 
-        let html5QrCode: any = null;
+        let controls: any = null;
         let isMounted = true;
 
         const startWebCamera = async () => {
             try {
-                const { Html5Qrcode } = require('html5-qrcode');
-                // Ensure element exists before starting
-                if (!document.getElementById("reader")) return;
+                const { BrowserMultiFormatReader } = require('@zxing/browser');
+                const codeReader = new BrowserMultiFormatReader();
                 
-                html5QrCode = new Html5Qrcode("reader");
-                await html5QrCode.start(
-                    { facingMode: "environment" },
-                    {
-                        fps: 10,
-                        qrbox: { width: 250, height: 250 },
-                        aspectRatio: 1.0
-                    },
-                    (decodedText: string, decodedResult: any) => {
-                        if (isMounted) {
-                            handleBarCodeScanned({ type: 'qr', data: decodedText });
+                if (videoRef.current && isMounted) {
+                    controls = await codeReader.decodeFromConstraints(
+                        { 
+                            video: { 
+                                facingMode: { ideal: "environment" },
+                                width: { ideal: 1280 }, // Request higher resolution for better scanning
+                                height: { ideal: 720 }
+                            } 
+                        },
+                        videoRef.current,
+                        (result: any, error: any) => {
+                            if (result && isMounted) {
+                                handleBarCodeScanned({ 
+                                    type: result.getBarcodeFormat()?.toString() || 'qr', 
+                                    data: result.getText() 
+                                });
+                            }
                         }
-                    },
-                    (errorMessage: any) => { /* ignore */ }
-                );
+                    );
+                }
             } catch (err) {
                 console.error('Camera error:', err);
             }
         };
 
-        // Small delay to ensure the DOM element is mounted
+        // Delay to ensure video element is mounted
         setTimeout(() => {
             if (isMounted) startWebCamera();
-        }, 300);
+        }, 100);
 
         return () => {
             isMounted = false;
-            if (html5QrCode && html5QrCode.isScanning) {
-                html5QrCode.stop().catch(console.error);
+            if (controls) {
+                controls.stop();
             }
         };
     }, [isWeb, scanned]);
@@ -166,11 +170,17 @@ export const QRScannerScreen = () => {
 
     return (
         <View style={styles.container}>
-            {/* Web: use HTML div element for html5-qrcode */}
+            {/* Web: use HTML video element directly for zxing */}
             {isWeb ? (
                 <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'black' }]}>
                     {/* @ts-ignore */}
-                    <div id="reader" style={{ width: '100%', height: '100%' }} />
+                    <video 
+                        ref={videoRef} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        autoPlay 
+                        playsInline 
+                        muted 
+                    />
                 </View>
             ) : (
                 <CameraView
