@@ -8,6 +8,10 @@ export const Inventory = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
+    const [categoryFilter, setCategoryFilter] = useState('');
+    const [colorTypeFilter, setColorTypeFilter] = useState('');
+    const [designTypeFilter, setDesignTypeFilter] = useState('');
+    const [fabricTypeFilter, setFabricTypeFilter] = useState('');
     const [selectedItem, setSelectedItem] = useState<Item | null>(null);
     const [serials, setSerials] = useState<any[]>([]);
     const [isEditing, setIsEditing] = useState(false);
@@ -131,10 +135,23 @@ export const Inventory = () => {
         }
     };
 
-    const filteredItems = items.filter(item =>
-        item.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.item_code.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const uniqueCategories = Array.from(new Set(items.map(i => i.category).filter(Boolean))).sort();
+    const uniqueColorTypes = Array.from(new Set(items.map(i => i.color_type).filter(Boolean))).sort();
+    const uniqueDesignTypes = Array.from(new Set(items.map(i => i.design_type).filter(Boolean))).sort();
+    const uniqueFabricTypes = Array.from(new Set(items.map(i => i.fabric_type).filter(Boolean))).sort();
+
+    const filteredItems = items.filter(item => {
+        const matchesSearch = item.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                              item.item_code.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesCategory = categoryFilter ? item.category === categoryFilter : true;
+        const matchesColor = colorTypeFilter ? item.color_type === colorTypeFilter : true;
+        const matchesDesign = designTypeFilter ? item.design_type === designTypeFilter : true;
+        const matchesFabric = fabricTypeFilter ? item.fabric_type === fabricTypeFilter : true;
+        
+        return matchesSearch && matchesCategory && matchesColor && matchesDesign && matchesFabric;
+    });
+
+    const activeFilterCount = (categoryFilter ? 1 : 0) + (colorTypeFilter ? 1 : 0) + (designTypeFilter ? 1 : 0) + (fabricTypeFilter ? 1 : 0);
 
     if (loading) {
         return (
@@ -220,6 +237,47 @@ export const Inventory = () => {
                         <ListIcon size={20} />
                     </button>
                 </div>
+            </div>
+
+            {/* Filters Row */}
+            <div style={{ marginBottom: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', backgroundColor: 'var(--surface)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '150px' }}>
+                    <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Quality</label>
+                    <select className="input" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} style={{ padding: '0.5rem', width: '100%' }}>
+                        <option value="">All</option>
+                        {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '150px' }}>
+                    <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Color Style</label>
+                    <select className="input" value={colorTypeFilter} onChange={e => setColorTypeFilter(e.target.value)} style={{ padding: '0.5rem', width: '100%' }}>
+                        <option value="">All</option>
+                        {uniqueColorTypes.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '150px' }}>
+                    <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Design Type</label>
+                    <select className="input" value={designTypeFilter} onChange={e => setDesignTypeFilter(e.target.value)} style={{ padding: '0.5rem', width: '100%' }}>
+                        <option value="">All</option>
+                        {uniqueDesignTypes.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '150px' }}>
+                    <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Fabric</label>
+                    <select className="input" value={fabricTypeFilter} onChange={e => setFabricTypeFilter(e.target.value)} style={{ padding: '0.5rem', width: '100%' }}>
+                        <option value="">All</option>
+                        {uniqueFabricTypes.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                </div>
+                {activeFilterCount > 0 && (
+                    <button 
+                        onClick={() => { setCategoryFilter(''); setColorTypeFilter(''); setDesignTypeFilter(''); setFabricTypeFilter(''); }}
+                        className="btn btn-secondary"
+                        style={{ height: 'fit-content', alignSelf: 'flex-end', padding: '0.5rem 1rem' }}
+                    >
+                        Clear Filters
+                    </button>
+                )}
             </div>
 
             {viewMode === 'card' ? (
@@ -468,7 +526,7 @@ export const Inventory = () => {
                                 <div>
                                     <p style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Master View Images</p>
                                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', width: '220px' }}>
-                                        {(selectedItem as any).master_images.filter((img: any) => img && img.url).map((img: any, idx: number) => (
+                                        {(selectedItem as any).master_images?.filter((img: any) => img && img.url).map((img: any, idx: number) => (
                                             <div key={idx} style={{ width: '68px' }}>
                                                 <img src={img.url} alt={img.type} style={{ width: '100%', height: '68px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border-color)' }} />
                                                 <div style={{ fontSize: '0.65rem', textAlign: 'center', marginTop: '2px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>{img.type}</div>
