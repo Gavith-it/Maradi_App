@@ -23,10 +23,11 @@ export const QRScannerScreen = () => {
     const isWeb = Platform.OS === 'web';
 
     // Accumulate scanned codes
-    const [scannedCodes, setScannedCodes] = useState({
+    const scannedCodesRef = useRef({
         itemCode: route.params?.currentItemCode || '',
         serialNumber: route.params?.currentSerialNumber || ''
     });
+    const [scannedCodes, setScannedCodes] = useState(scannedCodesRef.current);
 
     // --- Web-specific camera setup using @zxing/browser ---
     useEffect(() => {
@@ -110,7 +111,7 @@ export const QRScannerScreen = () => {
         const cleanData = data.trim().toUpperCase();
 
         if (mode === 'add_stock') {
-            let updated = { ...scannedCodes };
+            let updated = { ...scannedCodesRef.current };
             let changed = false;
 
             // Smart detection based on format
@@ -127,6 +128,7 @@ export const QRScannerScreen = () => {
             }
 
             if (changed) {
+                scannedCodesRef.current = updated;
                 setScannedCodes(updated);
 
                 // Auto-navigate instantly if we have successfully acquired BOTH
