@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -7,7 +7,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { theme } from '../styles/theme';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ScanLine, RotateCcw, CheckCircle2 } from 'lucide-react-native';
+import { ScanLine, CheckCircle2 } from 'lucide-react-native';
 import axios from 'axios';
 import { useAuthStore, API_URL } from '../store/useAuthStore';
 
@@ -18,6 +18,9 @@ export const QRScannerScreen = () => {
     const route = useRoute<any>();
     const mode = route.params?.mode || 'add_stock';
     const { token } = useAuthStore();
+    const videoRef = useRef<any>(null);
+    const scanIntervalRef = useRef<any>(null);
+    const isWeb = Platform.OS === 'web';
 
     // Accumulate scanned codes
     const [scannedCodes, setScannedCodes] = useState({
@@ -25,11 +28,58 @@ export const QRScannerScreen = () => {
         serialNumber: route.params?.currentSerialNumber || ''
     });
 
-    if (!permission) {
+    // --- Web-specific camera setup using html5-qrcode ---
+    useEffect(() => {
+        if (!isWeb || scanned) return;
+
+        let html5QrCode: any = null;
+        let isMounted = true;
+
+        const startWebCamera = async () => {
+            try {
+                const { Html5Qrcode } = require('html5-qrcode');
+                // Ensure element exists before starting
+                if (!document.getElementById("reader")) return;
+                
+                html5QrCode = new Html5Qrcode("reader");
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    {
+                        fps: 10,
+                        qrbox: { width: 250, height: 250 },
+                        aspectRatio: 1.0
+                    },
+                    (decodedText: string, decodedResult: any) => {
+                        if (isMounted) {
+                            handleBarCodeScanned({ type: 'qr', data: decodedText });
+                        }
+                    },
+                    (errorMessage: any) => { /* ignore */ }
+                );
+            } catch (err) {
+                console.error('Camera error:', err);
+            }
+        };
+
+        // Small delay to ensure the DOM element is mounted
+        setTimeout(() => {
+            if (isMounted) startWebCamera();
+        }, 300);
+
+        return () => {
+            isMounted = false;
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().catch(console.error);
+            }
+        };
+    }, [isWeb, scanned]);
+    // -------------------------------------------------------------------
+
+    if (!isWeb && !permission) {
         return <View style={styles.safeArea} />;
     }
 
-    if (!permission.granted) {
+    if (!isWeb && !permission?.granted) {
         return (
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.permissionContainer}>
@@ -116,13 +166,21 @@ export const QRScannerScreen = () => {
 
     return (
         <View style={styles.container}>
-            <CameraView
-                style={StyleSheet.absoluteFillObject}
-                onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-                barcodeScannerSettings={{
-                    barcodeTypes: ["qr", "ean13", "ean8", "pdf417", "code128", "code39"],
-                }}
-            />
+            {/* Web: use HTML div element for html5-qrcode */}
+            {isWeb ? (
+                <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'black' }]}>
+                    {/* @ts-ignore */}
+                    <div id="reader" style={{ width: '100%', height: '100%' }} />
+                </View>
+            ) : (
+                <CameraView
+                    style={StyleSheet.absoluteFillObject}
+                    onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+                    barcodeScannerSettings={{
+                        barcodeTypes: ["qr", "ean13", "ean8", "pdf417", "code128", "code39"],
+                    }}
+                />
+            )}
 
             {/* Multi-scan Top Bar Indicators */}
             {mode === 'add_stock' && (

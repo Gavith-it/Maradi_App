@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import * as Linking from 'expo-linking';
 import { useAuthStore } from '../store/useAuthStore';
+import { RootStackParamList } from '../types/navigation';
 import { LoginScreen } from '../screens/LoginScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { QRScannerScreen } from '../screens/QRScannerScreen';
@@ -18,6 +20,26 @@ import { ActivityIndicator, View } from 'react-native';
 
 const Stack = createNativeStackNavigator();
 
+const linking: LinkingOptions<RootStackParamList> = {
+    prefixes: [Linking.createURL('/')],
+    config: {
+        screens: {
+            Home: '',
+            Login: 'login',
+            ScanQR: 'scan',
+            AddStock: 'add-stock',
+            PendingOrders: 'orders',
+            OrderDetail: 'order/:id',
+            Catalog: 'catalog',
+            SerialSelection: 'select-serial',
+            Cart: 'cart',
+            OrderHistory: 'history',
+            InternalCatalog: 'internal-catalog',
+            InternalItemDetail: 'internal-item/:id',
+        }
+    }
+};
+
 export const AppNavigator = () => {
     const { user, token, isLoading } = useAuthStore();
 
@@ -30,7 +52,7 @@ export const AppNavigator = () => {
     }
 
     return (
-        <NavigationContainer>
+        <NavigationContainer linking={linking}>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
                 {token ? (
                     <>
