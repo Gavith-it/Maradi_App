@@ -29,6 +29,10 @@ export const QRScannerScreen = () => {
     });
     const [scannedCodes, setScannedCodes] = useState(scannedCodesRef.current);
 
+    // Per-value cooldown so ZXing is forced to find the OTHER QR after first scan
+    const lastScannedValuesRef = useRef<Map<string, number>>(new Map());
+    const SCAN_COOLDOWN_MS = 2500;
+
     // --- Web-specific camera setup using @zxing/browser ---
     useEffect(() => {
         if (!isWeb || scanned) return;
@@ -109,6 +113,14 @@ export const QRScannerScreen = () => {
         if (scanned) return;
 
         const cleanData = data.trim().toUpperCase();
+        const now = Date.now();
+
+        // --- Per-value cooldown: skip a code we just saw recently ---
+        // This forces ZXing to stop fixating on the first QR and find the second one
+        const lastScanTime = lastScannedValuesRef.current.get(cleanData);
+        if (lastScanTime && (now - lastScanTime) < SCAN_COOLDOWN_MS) return;
+        lastScannedValuesRef.current.set(cleanData, now);
+        // -------------------------------------------------------------
 
         if (mode === 'add_stock') {
             let updated = { ...scannedCodesRef.current };
@@ -134,7 +146,6 @@ export const QRScannerScreen = () => {
                 // Auto-navigate instantly if we have successfully acquired BOTH
                 if (updated.itemCode && updated.serialNumber) {
                     setScanned(true); // Stop camera
-                    // Using merge: true prevents pushing another screen on stack
                     navigation.navigate({
                         name: 'AddStock',
                         params: updated,
