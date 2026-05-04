@@ -167,11 +167,19 @@ export const QRScannerScreen = () => {
                 headers: { Authorization: `Bearer ${token}` }
             })
                 .then(() => {
-                    Alert.alert("Success", `Item ${cleanData} marked as sold`);
+                    if (Platform.OS === 'web') {
+                        window.alert(`Success: Item ${cleanData} marked as sold`);
+                    } else {
+                        Alert.alert("Success", `Item ${cleanData} marked as sold`);
+                    }
                 })
                 .catch(err => {
                     console.error('Mark sold error:', err.response?.data || err.message);
-                    Alert.alert("Error", err.response?.data?.message || "Failed to mark item as sold");
+                    if (Platform.OS === 'web') {
+                        window.alert(`Error: ${err.response?.data?.message || "Failed to mark item as sold"}`);
+                    } else {
+                        Alert.alert("Error", err.response?.data?.message || "Failed to mark item as sold");
+                    }
                 })
                 .finally(() => {
                     // Auto-resume scanner after a brief readable delay
