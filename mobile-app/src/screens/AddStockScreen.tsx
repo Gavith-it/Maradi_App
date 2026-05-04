@@ -109,8 +109,36 @@ export const AddStockScreen = () => {
     };
 
     const takePhoto = async (imageType: string) => {
-        const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+        if (Platform.OS === 'web') {
+            // On web/PWA: use a hidden file input with camera capture
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            (input as any).capture = 'environment'; // Opens back camera directly
+            input.onchange = async (e: any) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const dataUrl = ev.target?.result as string;
+                    setImages(prev => {
+                        const existingIndex = prev.findIndex(img => img.type === imageType);
+                        if (existingIndex >= 0) {
+                            const newArray = [...prev];
+                            newArray[existingIndex] = { type: imageType, url: dataUrl };
+                            return newArray;
+                        }
+                        return [...prev, { type: imageType, url: dataUrl }];
+                    });
+                };
+                reader.readAsDataURL(file);
+            };
+            input.click();
+            return;
+        }
 
+        // Native (Android/iOS): use Expo ImagePicker as before
+        const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
         if (permissionResult.granted === false) {
             Alert.alert("Permission to access camera is required!");
             return;
@@ -118,16 +146,13 @@ export const AddStockScreen = () => {
 
         const result = await ImagePicker.launchCameraAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: false, // Disabled cropping to allow full saree images
-            quality: 0.2, // Aggressive compression (was 0.5) to stay under Vercel's 4.5MB limit
+            allowsEditing: false,
+            quality: 0.2,
             base64: true,
         });
 
         if (!result.canceled && result.assets && result.assets.length > 0) {
-            // Create a data URI
             const base64Img = `data:image/jpeg;base64,${result.assets[0].base64}`;
-
-            // Update the specific image type in the array
             setImages(prev => {
                 const existingIndex = prev.findIndex(img => img.type === imageType);
                 if (existingIndex >= 0) {
@@ -139,6 +164,7 @@ export const AddStockScreen = () => {
             });
         }
     };
+
 
     const handleSubmit = async () => {
         if (!itemCode) {
