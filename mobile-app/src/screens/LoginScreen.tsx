@@ -14,7 +14,12 @@ export const LoginScreen = () => {
         try {
             await login(email, password);
         } catch (error: any) {
-            Alert.alert('Login Failed', error.response?.data?.message || 'Something went wrong');
+            const errorMsg = error.response?.data?.message || 'Something went wrong';
+            if (Platform.OS === 'web') {
+                window.alert(`Login Failed: ${errorMsg}`);
+            } else {
+                Alert.alert('Login Failed', errorMsg);
+            }
         }
     };
 
