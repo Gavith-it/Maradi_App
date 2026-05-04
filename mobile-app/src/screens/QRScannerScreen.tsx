@@ -42,24 +42,26 @@ export const QRScannerScreen = () => {
 
         const startWebCamera = async () => {
             try {
-                const { BrowserMultiFormatReader } = require('@zxing/browser');
-                const codeReader = new BrowserMultiFormatReader();
-                
+                // BrowserQRCodeReader is faster than MultiFormat since it only looks for QR codes
+                // Both codes on the Maradi tag are QR format
+                const { BrowserQRCodeReader } = require('@zxing/browser');
+                const codeReader = new BrowserQRCodeReader();
+
                 if (videoRef.current && isMounted) {
                     controls = await codeReader.decodeFromConstraints(
-                        { 
-                            video: { 
+                        {
+                            video: {
                                 facingMode: { ideal: "environment" },
-                                width: { ideal: 1280 }, // Request higher resolution for better scanning
-                                height: { ideal: 720 }
-                            } 
+                                width: { ideal: 1920 },
+                                height: { ideal: 1080 }
+                            }
                         },
                         videoRef.current,
                         (result: any, error: any) => {
                             if (result && isMounted) {
-                                handleBarCodeScanned({ 
-                                    type: result.getBarcodeFormat()?.toString() || 'qr', 
-                                    data: result.getText() 
+                                handleBarCodeScanned({
+                                    type: 'qr',
+                                    data: result.getText()
                                 });
                             }
                         }

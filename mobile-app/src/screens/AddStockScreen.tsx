@@ -227,18 +227,25 @@ export const AddStockScreen = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            Alert.alert('Success', addStockResponse.data.message || 'Stock processed successfully', [
-                {
-                    text: 'OK',
-                    onPress: () => {
-                        // Reset navigation stack to Home so back button doesn't rewind through scanners
-                        navigation.reset({
-                            index: 0,
-                            routes: [{ name: 'Home' }],
-                        });
+            const successMsg = addStockResponse.data.message || 'Stock added successfully!';
+
+            if (Platform.OS === 'web') {
+                // On web, Alert.alert button callbacks are ignored — handle directly
+                window.alert('✅ ' + successMsg);
+                navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+            } else {
+                Alert.alert('Success', successMsg, [
+                    {
+                        text: 'OK',
+                        onPress: () => {
+                            navigation.reset({
+                                index: 0,
+                                routes: [{ name: 'Home' }],
+                            });
+                        }
                     }
-                }
-            ]);
+                ]);
+            }
         } catch (error: any) {
             console.log('Add Stock Error:', error.response?.data || error.message);
             Alert.alert(
