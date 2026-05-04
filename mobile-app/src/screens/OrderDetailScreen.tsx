@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, Image } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, Image, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import axios from 'axios';
 import { useAuthStore, API_URL } from '../store/useAuthStore';
@@ -65,9 +65,15 @@ export const OrderDetailScreen = () => {
             await axios.put(`${API_URL}/orders/${orderId}/status`, { status: newStatus }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            Alert.alert('Success', `Order marked as ${newStatus}`, [
-                { text: 'OK', onPress: fetchOrderDetails }
-            ]);
+            
+            if (Platform.OS === 'web') {
+                window.alert(`Order marked as ${newStatus}`);
+                fetchOrderDetails();
+            } else {
+                Alert.alert('Success', `Order marked as ${newStatus}`, [
+                    { text: 'OK', onPress: fetchOrderDetails }
+                ]);
+            }
         } catch (error) {
             Alert.alert('Error', 'Failed to update status');
         }
@@ -78,9 +84,15 @@ export const OrderDetailScreen = () => {
             await axios.put(`${API_URL}/orders/items/${itemId}/status`, { status: 'rejected' }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            Alert.alert('Success', 'Item removed from order', [
-                { text: 'OK', onPress: fetchOrderDetails }
-            ]);
+            
+            if (Platform.OS === 'web') {
+                window.alert('Item removed from order');
+                fetchOrderDetails();
+            } else {
+                Alert.alert('Success', 'Item removed from order', [
+                    { text: 'OK', onPress: fetchOrderDetails }
+                ]);
+            }
         } catch (error) {
             console.error(error);
             Alert.alert('Error', 'Failed to remove item');
@@ -193,10 +205,19 @@ export const OrderDetailScreen = () => {
                                 {(user?.role === 'internal_user' || user?.role === 'owner') && item.status !== 'rejected' && order.status === 'pending' && (
                                     <TouchableOpacity
                                         style={styles.removeButton}
-                                        onPress={() => Alert.alert('Confirm Remove', 'Are you sure? This will remove the item from the order, deduct the price from the total, and release stock.', [
-                                            { text: 'Cancel', style: 'cancel' },
-                                            { text: 'Remove', style: 'destructive', onPress: () => removeItem(item.order_item_id) }
-                                        ])}
+                                        onPress={() => {
+                                            const confirmMsg = 'Are you sure? This will remove the item from the order, deduct the price from the total, and release stock.';
+                                            if (Platform.OS === 'web') {
+                                                if (window.confirm(confirmMsg)) {
+                                                    removeItem(item.order_item_id);
+                                                }
+                                            } else {
+                                                Alert.alert('Confirm Remove', confirmMsg, [
+                                                    { text: 'Cancel', style: 'cancel' },
+                                                    { text: 'Remove', style: 'destructive', onPress: () => removeItem(item.order_item_id) }
+                                                ]);
+                                            }
+                                        }}
                                     >
                                         <Trash2 size={18} color="#ef4444" />
                                     </TouchableOpacity>

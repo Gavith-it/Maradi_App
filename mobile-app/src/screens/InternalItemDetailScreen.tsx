@@ -71,6 +71,33 @@ export const InternalItemDetailScreen = () => {
     };
 
     const takeMasterPhoto = async (imageType: 'border' | 'pallu' | 'body') => {
+        if (Platform.OS === 'web') {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            (input as any).capture = 'environment';
+            input.onchange = async (e: any) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const dataUrl = ev.target?.result as string;
+                    setEditImages(prev => {
+                        const existingIndex = prev.findIndex(img => img.type === imageType);
+                        if (existingIndex >= 0) {
+                            const newArray = [...prev];
+                            newArray[existingIndex] = { type: imageType, url: dataUrl };
+                            return newArray;
+                        }
+                        return [...prev, { type: imageType, url: dataUrl }];
+                    });
+                };
+                reader.readAsDataURL(file);
+            };
+            input.click();
+            return;
+        }
+
         const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
         if (permissionResult.granted === false) {
             Alert.alert("Permission to access camera is required!");
@@ -153,6 +180,25 @@ export const InternalItemDetailScreen = () => {
     };
 
     const handleSerialPhotoCapture = async () => {
+        if (Platform.OS === 'web') {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            (input as any).capture = 'environment';
+            input.onchange = async (e: any) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const dataUrl = ev.target?.result as string;
+                    setEditSerialImage(dataUrl);
+                };
+                reader.readAsDataURL(file);
+            };
+            input.click();
+            return;
+        }
+
         const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
         if (permissionResult.granted === false) {
             Alert.alert("Permission required!");

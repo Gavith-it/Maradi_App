@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import axios from 'axios';
 import { useAuthStore, API_URL } from '../store/useAuthStore';
@@ -86,13 +86,19 @@ export const CartScreen = () => {
             const response = await axios.post(`${API_URL}/orders`, { notes: 'Mobile App Order' }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            Alert.alert('Success', `Order Placed! ID: ${response.data.orderNumber}`, [
-                {
-                    text: 'OK', onPress: () => {
-                        fetchCart(); // Clear cart in UI
+            
+            if (Platform.OS === 'web') {
+                window.alert(`Order Placed! ID: ${response.data.orderNumber}`);
+                fetchCart(); // Clear cart in UI
+            } else {
+                Alert.alert('Success', `Order Placed! ID: ${response.data.orderNumber}`, [
+                    {
+                        text: 'OK', onPress: () => {
+                            fetchCart(); // Clear cart in UI
+                        }
                     }
-                }
-            ]);
+                ]);
+            }
         } catch (error: any) {
             Alert.alert('Error', error.response?.data?.message || 'Checkout failed');
         }
