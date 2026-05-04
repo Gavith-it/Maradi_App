@@ -45,15 +45,20 @@ export const QRScannerScreen = () => {
                 // BrowserQRCodeReader is faster than MultiFormat since it only looks for QR codes
                 // Both codes on the Maradi tag are QR format
                 const { BrowserQRCodeReader } = require('@zxing/browser');
-                const codeReader = new BrowserQRCodeReader();
+                
+                // Reduce the delay between scan attempts (default is 500ms) for faster detection
+                const codeReader = new BrowserQRCodeReader(150);
+                if (codeReader.timeBetweenDecodingAttempts !== undefined) {
+                    codeReader.timeBetweenDecodingAttempts = 150; 
+                }
 
                 if (videoRef.current && isMounted) {
                     controls = await codeReader.decodeFromConstraints(
                         {
                             video: {
                                 facingMode: { ideal: "environment" },
-                                width: { ideal: 1920 },
-                                height: { ideal: 1080 }
+                                width: { ideal: 1280 }, // Lowering from 1920 to 1280 improves JS processing speed
+                                height: { ideal: 720 }
                             }
                         },
                         videoRef.current,
