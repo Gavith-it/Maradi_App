@@ -47,7 +47,7 @@ export const QRScannerScreen = () => {
                 const { BrowserQRCodeReader } = require('@zxing/browser');
                 
                 // Reduce the delay between scan attempts (default is 500ms) for faster detection
-                const codeReader = new BrowserQRCodeReader(150);
+                const codeReader = new BrowserQRCodeReader(null, { delayBetweenScanAttempts: 150 });
                 if (codeReader.timeBetweenDecodingAttempts !== undefined) {
                     codeReader.timeBetweenDecodingAttempts = 150; 
                 }
