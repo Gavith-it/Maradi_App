@@ -33,20 +33,72 @@ export const QRScannerScreen = () => {
     const lastScannedValuesRef = useRef<Map<string, number>>(new Map());
     const SCAN_COOLDOWN_MS = 2500;
 
-    // --- Web-specific camera setup using @zxing/browser ---
+    // --- Web-specific camera setup using native BarcodeDetector or @zxing/browser ---
     useEffect(() => {
         if (!isWeb || scanned) return;
 
-        let controls: any = null;
+        let controls: any = null; // for ZXing
+        let stream: MediaStream | null = null; // for BarcodeDetector
         let isMounted = true;
+        let scanTimer: any = null; // for BarcodeDetector loop
 
         const startWebCamera = async () => {
+            // 1. Try to use native BarcodeDetector API if available (iOS 17+, Chrome Android)
+            const hasBarcodeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window;
+            if (hasBarcodeDetector) {
+                try {
+                    const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+                    
+                    // Request camera stream manually
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode: { ideal: "environment" },
+                            width: { ideal: 1920 }, // High resolution is fine because GPU decoding is extremely fast
+                            height: { ideal: 1080 }
+                        }
+                    });
+
+                    if (videoRef.current && isMounted) {
+                        videoRef.current.srcObject = stream;
+                        
+                        const detectFrame = async () => {
+                            if (!isMounted || scanned) return;
+                            try {
+                                if (videoRef.current && videoRef.current.readyState >= 2) { // HAVE_CURRENT_DATA or higher
+                                    const barcodes = await detector.detect(videoRef.current);
+                                    if (barcodes.length > 0 && isMounted) {
+                                        handleBarCodeScanned({
+                                            type: 'qr',
+                                            data: barcodes[0].rawValue
+                                        });
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Barcode detection error:', e);
+                            }
+                            // Scan every 150ms to keep CPU idle but responsive
+                            scanTimer = setTimeout(detectFrame, 150);
+                        };
+
+                        videoRef.current.onloadedmetadata = () => {
+                            if (isMounted) detectFrame();
+                        };
+                    }
+                    console.log('Using native BarcodeDetector API');
+                    return; // Successfully set up BarcodeDetector, skip ZXing fallback
+                } catch (err) {
+                    console.warn('Native BarcodeDetector not supported or failed to initialize, falling back to ZXing:', err);
+                    // Clean up and proceed to ZXing fallback
+                    if (stream) {
+                        stream.getTracks().forEach(track => track.stop());
+                        stream = null;
+                    }
+                }
+            }
+
+            // 2. Fallback to @zxing/browser (CPU-based JavaScript decoding)
             try {
-                // BrowserQRCodeReader is faster than MultiFormat since it only looks for QR codes
-                // Both codes on the Maradi tag are QR format
                 const { BrowserQRCodeReader } = require('@zxing/browser');
-                
-                // Reduce the delay between scan attempts (default is 500ms) for faster detection
                 const codeReader = new BrowserQRCodeReader(null, { delayBetweenScanAttempts: 150 });
                 if (codeReader.timeBetweenDecodingAttempts !== undefined) {
                     codeReader.timeBetweenDecodingAttempts = 150; 
@@ -57,7 +109,7 @@ export const QRScannerScreen = () => {
                         {
                             video: {
                                 facingMode: { ideal: "environment" },
-                                width: { ideal: 1280 }, // Lowering from 1920 to 1280 improves JS processing speed
+                                width: { ideal: 1280 }, // Lower resolution to keep CPU usage reasonable for JS decoding
                                 height: { ideal: 720 }
                             }
                         },
@@ -72,20 +124,26 @@ export const QRScannerScreen = () => {
                         }
                     );
                 }
+                console.log('Using @zxing/browser fallback');
             } catch (err) {
-                console.error('Camera error:', err);
+                console.error('Camera fallback error:', err);
             }
         };
 
         // Delay to ensure video element is mounted
-        setTimeout(() => {
+        const timer = setTimeout(() => {
             if (isMounted) startWebCamera();
         }, 100);
 
         return () => {
             isMounted = false;
+            clearTimeout(timer);
+            if (scanTimer) clearTimeout(scanTimer);
             if (controls) {
                 controls.stop();
+            }
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
             }
         };
     }, [isWeb, scanned]);
@@ -215,7 +273,7 @@ export const QRScannerScreen = () => {
                     style={StyleSheet.absoluteFillObject}
                     onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
                     barcodeScannerSettings={{
-                        barcodeTypes: ["qr", "ean13", "ean8", "pdf417", "code128", "code39"],
+                        barcodeTypes: ["qr"],
                     }}
                 />
             )}
