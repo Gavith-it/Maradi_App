@@ -76,12 +76,59 @@ export const InternalItemDetailScreen = () => {
             input.type = 'file';
             input.accept = 'image/*';
             (input as any).capture = 'environment';
+            input.style.display = 'none';
+            document.body.appendChild(input);
+
             input.onchange = async (e: any) => {
                 const file = e.target.files?.[0];
+                if (input.parentNode) {
+                    document.body.removeChild(input);
+                }
                 if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    const dataUrl = ev.target?.result as string;
+
+                try {
+                    const dataUrl = await new Promise<string>((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const img = document.createElement('img');
+                            img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                const maxWidth = 1024;
+                                const maxHeight = 1024;
+                                let width = img.width;
+                                let height = img.height;
+
+                                if (width > height) {
+                                    if (width > maxWidth) {
+                                        height = Math.round((height * maxWidth) / width);
+                                        width = maxWidth;
+                                    }
+                                } else {
+                                    if (height > maxHeight) {
+                                        width = Math.round((width * maxHeight) / height);
+                                        height = maxHeight;
+                                    }
+                                }
+
+                                canvas.width = width;
+                                canvas.height = height;
+
+                                const ctx = canvas.getContext('2d');
+                                if (!ctx) {
+                                    resolve(event.target?.result as string);
+                                    return;
+                                }
+
+                                ctx.drawImage(img, 0, 0, width, height);
+                                resolve(canvas.toDataURL('image/jpeg', 0.6));
+                            };
+                            img.onerror = reject;
+                            img.src = event.target?.result as string;
+                        };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+
                     setEditImages(prev => {
                         const existingIndex = prev.findIndex(img => img.type === imageType);
                         if (existingIndex >= 0) {
@@ -91,8 +138,10 @@ export const InternalItemDetailScreen = () => {
                         }
                         return [...prev, { type: imageType, url: dataUrl }];
                     });
-                };
-                reader.readAsDataURL(file);
+                } catch (err) {
+                    console.error('Master image capture error:', err);
+                    Alert.alert('Error', 'Failed to process the captured image.');
+                }
             };
             input.click();
             return;
@@ -185,15 +234,64 @@ export const InternalItemDetailScreen = () => {
             input.type = 'file';
             input.accept = 'image/*';
             (input as any).capture = 'environment';
+            input.style.display = 'none';
+            document.body.appendChild(input);
+
             input.onchange = async (e: any) => {
                 const file = e.target.files?.[0];
+                if (input.parentNode) {
+                    document.body.removeChild(input);
+                }
                 if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    const dataUrl = ev.target?.result as string;
+
+                try {
+                    const dataUrl = await new Promise<string>((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const img = document.createElement('img');
+                            img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                const maxWidth = 1024;
+                                const maxHeight = 1024;
+                                let width = img.width;
+                                let height = img.height;
+
+                                if (width > height) {
+                                    if (width > maxWidth) {
+                                        height = Math.round((height * maxWidth) / width);
+                                        width = maxWidth;
+                                    }
+                                } else {
+                                    if (height > maxHeight) {
+                                        width = Math.round((width * maxHeight) / height);
+                                        height = maxHeight;
+                                    }
+                                }
+
+                                canvas.width = width;
+                                canvas.height = height;
+
+                                const ctx = canvas.getContext('2d');
+                                if (!ctx) {
+                                    resolve(event.target?.result as string);
+                                    return;
+                                }
+
+                                ctx.drawImage(img, 0, 0, width, height);
+                                resolve(canvas.toDataURL('image/jpeg', 0.6));
+                            };
+                            img.onerror = reject;
+                            img.src = event.target?.result as string;
+                        };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+
                     setEditSerialImage(dataUrl);
-                };
-                reader.readAsDataURL(file);
+                } catch (err) {
+                    console.error('Serial image capture error:', err);
+                    Alert.alert('Error', 'Failed to process the captured image.');
+                }
             };
             input.click();
             return;

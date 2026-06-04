@@ -115,12 +115,60 @@ export const AddStockScreen = () => {
             input.type = 'file';
             input.accept = 'image/*';
             (input as any).capture = 'environment'; // Opens back camera directly
+            input.style.display = 'none';
+            document.body.appendChild(input); // MUST append to body for Safari iOS stability
+
             input.onchange = async (e: any) => {
                 const file = e.target.files?.[0];
+                if (input.parentNode) {
+                    document.body.removeChild(input); // Clean up DOM
+                }
                 if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    const dataUrl = ev.target?.result as string;
+
+                try {
+                    // Compress image using canvas before storing (prevents massive base64 strings crashing browsers)
+                    const dataUrl = await new Promise<string>((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const img = document.createElement('img');
+                            img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                const maxWidth = 1024;
+                                const maxHeight = 1024;
+                                let width = img.width;
+                                let height = img.height;
+
+                                if (width > height) {
+                                    if (width > maxWidth) {
+                                        height = Math.round((height * maxWidth) / width);
+                                        width = maxWidth;
+                                    }
+                                } else {
+                                    if (height > maxHeight) {
+                                        width = Math.round((width * maxHeight) / height);
+                                        height = maxHeight;
+                                    }
+                                }
+
+                                canvas.width = width;
+                                canvas.height = height;
+
+                                const ctx = canvas.getContext('2d');
+                                if (!ctx) {
+                                    resolve(event.target?.result as string);
+                                    return;
+                                }
+
+                                ctx.drawImage(img, 0, 0, width, height);
+                                resolve(canvas.toDataURL('image/jpeg', 0.6));
+                            };
+                            img.onerror = reject;
+                            img.src = event.target?.result as string;
+                        };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+
                     setImages(prev => {
                         const existingIndex = prev.findIndex(img => img.type === imageType);
                         if (existingIndex >= 0) {
@@ -130,8 +178,10 @@ export const AddStockScreen = () => {
                         }
                         return [...prev, { type: imageType, url: dataUrl }];
                     });
-                };
-                reader.readAsDataURL(file);
+                } catch (err) {
+                    console.error('Image capture error:', err);
+                    Alert.alert('Error', 'Failed to process the captured image.');
+                }
             };
             input.click();
             return;
