@@ -104,15 +104,15 @@ export const QRScannerScreen = () => {
                     codeReader.timeBetweenDecodingAttempts = 150; 
                 }
 
-                if (videoRef.current && isMounted) {
-                    controls = await codeReader.decodeFromConstraints(
-                        {
-                            video: {
-                                facingMode: { ideal: "environment" },
-                                width: { ideal: 1280 }, // Lower resolution to keep CPU usage reasonable for JS decoding
-                                height: { ideal: 720 }
-                            }
-                        },
+                const isIOS = typeof navigator !== 'undefined' && (
+                    /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+                );
+
+                const startDecoding = async (constraints: any) => {
+                    if (!videoRef.current || !isMounted) return null;
+                    return await codeReader.decodeFromConstraints(
+                        { video: constraints },
                         videoRef.current,
                         (result: any, error: any) => {
                             if (result && isMounted) {
@@ -123,6 +123,36 @@ export const QRScannerScreen = () => {
                             }
                         }
                     );
+                };
+
+                if (videoRef.current && isMounted) {
+                    if (isIOS) {
+                        // iOS Safari Optimizations:
+                        // 1. Force exact environment camera to avoid ultra-wide lens focus bugs.
+                        // 2. Lower resolution to 640x480 to reduce CPU load 4x for fast real-time JS decoding.
+                        try {
+                            controls = await startDecoding({
+                                facingMode: { exact: "environment" },
+                                width: { ideal: 640 },
+                                height: { ideal: 480 }
+                            });
+                        } catch (err) {
+                            console.warn('Failed to start camera with exact environment constraint on iOS, trying ideal:', err);
+                            // Fallback to ideal environment if exact is not supported (e.g. simulator)
+                            controls = await startDecoding({
+                                facingMode: { ideal: "environment" },
+                                width: { ideal: 640 },
+                                height: { ideal: 480 }
+                            });
+                        }
+                    } else {
+                        // Non-iOS (Unchanged for Android/other platforms)
+                        controls = await startDecoding({
+                            facingMode: { ideal: "environment" },
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        });
+                    }
                 }
                 console.log('Using @zxing/browser fallback');
             } catch (err) {
