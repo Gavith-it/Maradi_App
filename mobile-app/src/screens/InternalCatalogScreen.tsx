@@ -81,14 +81,21 @@ export const InternalCatalogScreen = () => {
         );
     }
 
+    const totalSarees = items.reduce((sum, item) => sum + item.stock_quantity, 0);
+
     return (
         <SafeAreaView style={styles.safeArea}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <ArrowLeft color={theme.colors.text} size={24} />
-                </TouchableOpacity>
-                <PackageSearch color={theme.colors.primaryDark} size={24} style={{ marginRight: 8 }} />
-                <Text style={styles.headerText}>In-Stock Inventory</Text>
+                <View style={styles.headerLeft}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <ArrowLeft color={theme.colors.text} size={24} />
+                    </TouchableOpacity>
+                    <PackageSearch color={theme.colors.primaryDark} size={24} style={{ marginRight: 8 }} />
+                    <Text style={styles.headerText}>In-Stock Inventory</Text>
+                </View>
+                <View style={styles.badgeContainer}>
+                    <Text style={styles.badgeText}>{totalSarees} Total</Text>
+                </View>
             </View>
             <FlatList
                 data={items}
@@ -126,6 +133,24 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.border,
+    },
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+    },
+    badgeContainer: {
+        backgroundColor: '#e8f5e9',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#c8e6c9',
+    },
+    badgeText: {
+        color: theme.colors.primaryDark,
+        fontSize: 13,
+        fontWeight: 'bold',
     },
     backButton: {
         marginRight: theme.spacing.md,
